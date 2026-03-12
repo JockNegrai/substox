@@ -1,0 +1,1387 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SubStox — Inventory Intelligence</title>
+
+
+<style>
+:root{
+  --bg:#F4F2EE;
+  --bg2:#EDEAE4;
+  --surface:#FFFFFF;
+  --surface2:#F9F8F6;
+  --border:#DDD9D2;
+  --border2:#E8E4DE;
+  --text:#1A1814;
+  --text2:#6B6460;
+  --text3:#9C9591;
+  --accent:#1D6F42;
+  --accent-light:#E8F5EE;
+  --accent-border:#B8DEC9;
+  --red:#C0392B;
+  --red-light:#FAEAE8;
+  --orange:#C0621B;
+  --orange-light:#FBF0E6;
+  --blue:#1A4D8F;
+  --blue-light:#E8EFF9;
+  --gold:#A07C20;
+  --gold-light:#FAF4E1;
+  --shadow:0 1px 3px rgba(0,0,0,0.07),0 4px 12px rgba(0,0,0,0.04);
+  --shadow-md:0 2px 8px rgba(0,0,0,0.08),0 8px 24px rgba(0,0,0,0.06);
+  --radius:10px;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,-apple-system,sans-serif;min-height:100vh;font-size:14px;line-height:1.5}
+::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:var(--bg)}::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
+button,input,select,textarea{font-family:'Segoe UI',system-ui,-apple-system,sans-serif}
+input[type=number]::-webkit-inner-spin-button{opacity:1}
+
+/* ── LAYOUT ── */
+#app{display:flex;min-height:100vh}
+#sidebar{width:220px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;position:sticky;top:0;height:100vh;overflow-y:auto}
+#main{flex:1;overflow-y:auto;background:var(--bg);display:flex;flex-direction:column}
+#topbar{display:flex;align-items:center;justify-content:space-between;padding:16px 28px;border-bottom:1px solid var(--border);position:sticky;top:0;background:rgba(244,242,238,0.95);backdrop-filter:blur(8px);z-index:10;gap:12px}
+#content{flex:1;padding:28px}
+
+/* ── SIDEBAR ── */
+.logo{padding:22px 20px 18px;border-bottom:1px solid var(--border2)}
+.logo h1{font-family:Georgia,serif;font-size:22px;color:var(--accent);font-weight:400;letter-spacing:-0.3px}
+.logo p{font-family:'Courier New',monospace;font-size:9px;color:var(--text3);letter-spacing:2px;text-transform:uppercase;margin-top:3px}
+nav{padding:12px 8px;flex:1}
+.nav-section{font-family:'Courier New',monospace;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--text3);padding:10px 12px 5px}
+.nav-item{display:flex;align-items:center;gap:9px;padding:8px 12px;border-radius:8px;font-size:13px;font-weight:500;color:var(--text2);cursor:pointer;margin-bottom:1px;transition:all 0.15s;user-select:none;border:1px solid transparent}
+.nav-item:hover{color:var(--text);background:var(--bg2)}
+.nav-item.active{color:var(--accent);background:var(--accent-light);border-color:var(--accent-border);font-weight:600}
+.nav-item .ni{width:16px;text-align:center;font-size:13px;opacity:0.7}
+.nav-item .nbadge{background:var(--red);color:white;font-size:9px;font-weight:700;padding:1px 5px;border-radius:10px;font-family:'Courier New',monospace;margin-left:auto}
+.user-area{padding:12px 16px;border-top:1px solid var(--border2);display:flex;align-items:center;gap:10px;cursor:pointer;position:relative}
+.avatar{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--blue),var(--accent));display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:white;flex-shrink:0;font-family:'Courier New',monospace}
+
+/* ── CARDS ── */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow)}
+.card-head{padding:14px 20px 12px;border-bottom:1px solid var(--border2);display:flex;align-items:center;justify-content:space-between}
+.card-head h3{font-size:13px;font-weight:600;color:var(--text)}
+.card-head .sub{font-family:'Courier New',monospace;font-size:10px;color:var(--text3)}
+
+/* ── KPIs ── */
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px}
+.kpi-grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:14px}
+.kpi-grid-2{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin-bottom:14px}
+.kpi{padding:20px;border-radius:var(--radius);background:var(--surface);border:1px solid var(--border);box-shadow:var(--shadow)}
+.kpi-label{font-family:'Courier New',monospace;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text3);margin-bottom:10px;display:block}
+.kpi-val{font-family:Georgia,serif;font-size:30px;line-height:1;margin-bottom:7px;color:var(--text)}
+.kpi-sub{font-size:11px;font-weight:500;font-family:'Courier New',monospace;color:var(--text3)}
+
+/* ── TABLES ── */
+table{width:100%;border-collapse:collapse}
+th{font-family:'Courier New',monospace;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text3);padding:11px 16px;text-align:left;font-weight:500;border-bottom:1px solid var(--border2);background:var(--surface2)}
+td{padding:11px 16px;border-bottom:1px solid var(--border2);font-size:13px;color:var(--text)}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:var(--surface2)}
+
+/* ── BUTTONS ── */
+.btn{padding:8px 16px;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid var(--accent);background:var(--accent);color:white;transition:all 0.15s;display:inline-flex;align-items:center;gap:5px}
+.btn:hover{background:#175e38;border-color:#175e38}
+.btn:disabled{opacity:0.5;cursor:not-allowed}
+.btn-outline{background:transparent;color:var(--text2);border-color:var(--border)}
+.btn-outline:hover{background:var(--bg2);border-color:var(--border);color:var(--text)}
+.btn-blue{background:var(--blue);border-color:var(--blue);color:white}
+.btn-blue:hover{background:#153f78}
+.btn-red{background:var(--red);border-color:var(--red);color:white}
+.btn-sm{padding:5px 11px;font-size:11px}
+.btn-full{width:100%;justify-content:center;padding:10px}
+.btn-advance{background:var(--surface2);border:1px solid var(--border);color:var(--text2);padding:4px 10px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;font-family:'Segoe UI',system-ui,-apple-system,sans-serif}
+.btn-advance:hover{color:var(--text);border-color:var(--border)}
+
+/* ── FORMS ── */
+.field{margin-bottom:13px}
+.field label{font-family:'Courier New',monospace;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text3);display:block;margin-bottom:5px}
+.field input,.field select,.field textarea{background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:8px 12px;color:var(--text);font-size:13px;width:100%;outline:none;transition:border-color 0.15s}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-light)}
+.field textarea{min-height:60px;resize:vertical}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+
+/* ── MODALS ── */
+.modal-overlay{position:fixed;inset:0;background:rgba(26,24,20,0.4);z-index:100;display:none;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(2px)}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:28px;width:100%;max-width:520px;max-height:90vh;overflow-y:auto;box-shadow:var(--shadow-md)}
+.modal-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}
+.modal-head h2{font-family:Georgia,serif;font-size:20px;font-weight:400}
+.modal-close{background:none;border:none;color:var(--text3);font-size:20px;cursor:pointer;padding:2px 6px;border-radius:5px;line-height:1}
+.modal-close:hover{background:var(--bg2);color:var(--text)}
+
+/* ── TOAST ── */
+#toast{position:fixed;bottom:24px;right:24px;background:var(--surface);border-radius:10px;padding:12px 18px;z-index:200;font-size:13px;font-weight:600;box-shadow:var(--shadow-md);max-width:320px;border:1px solid var(--border);display:none;align-items:center;gap:8px}
+
+/* ── BADGES / PILLS ── */
+.tag{font-family:'Courier New',monospace;font-size:9px;padding:3px 9px;border-radius:20px;font-weight:600;letter-spacing:0.3px;text-transform:uppercase;display:inline-block;white-space:nowrap}
+.tag-green{background:var(--accent-light);color:var(--accent);border:1px solid var(--accent-border)}
+.tag-red{background:var(--red-light);color:var(--red);border:1px solid #EBB7B2}
+.tag-orange{background:var(--orange-light);color:var(--orange);border:1px solid #EDCBA8}
+.tag-blue{background:var(--blue-light);color:var(--blue);border:1px solid #B8CCEC}
+.tag-gold{background:var(--gold-light);color:var(--gold);border:1px solid #DDD0A0}
+.tag-gray{background:var(--bg2);color:var(--text3);border:1px solid var(--border)}
+
+/* ── MISC ── */
+.bar-track{height:5px;background:var(--bg2);border-radius:3px;overflow:hidden;margin-top:3px}
+.bar-fill{height:100%;border-radius:3px}
+.two-col{display:grid;grid-template-columns:1fr 300px;gap:16px;margin-bottom:16px}
+.two-col-eq{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+.two-col-lots{display:grid;grid-template-columns:1.5fr 1fr;gap:16px}
+.right-stack{display:flex;flex-direction:column;gap:14px}
+.page{display:none}.page.active{display:block}
+.spinner{display:inline-block;width:13px;height:13px;border:2px solid rgba(255,255,255,0.3);border-top-color:white;border-radius:50%;animation:spin 0.6s linear infinite;vertical-align:middle;margin-right:5px}
+.spinner-dark{border:2px solid rgba(0,0,0,0.1);border-top-color:var(--text)}
+@keyframes spin{to{transform:rotate(360deg)}}
+.method-toggle{display:flex;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:3px;gap:3px}
+.method-btn{padding:6px 13px;border-radius:6px;border:none;background:none;color:var(--text2);font-weight:600;font-size:11px;cursor:pointer;transition:all 0.15s;font-family:'Segoe UI',system-ui,-apple-system,sans-serif}
+.method-btn.active{background:var(--surface);color:var(--accent);box-shadow:var(--shadow);border:1px solid var(--accent-border)}
+.upload-zone{border:2px dashed var(--border);border-radius:10px;padding:28px;text-align:center;cursor:pointer;transition:all 0.2s;margin-bottom:14px}
+.upload-zone:hover,.upload-zone.drag{border-color:var(--accent);background:var(--accent-light)}
+.upload-zone input{display:none}
+.section-title{font-family:Georgia,serif;font-size:20px;color:var(--text);font-weight:400;margin-bottom:20px}
+.section-title em{color:var(--accent);font-style:italic}
+.info-banner{padding:12px 16px;border-radius:8px;font-size:12px;font-weight:500;display:flex;align-items:center;gap:10px;margin-bottom:18px}
+.info-banner.warn{background:var(--orange-light);border:1px solid #EDCBA8;color:var(--orange)}
+.info-banner.danger{background:var(--red-light);border:1px solid #EBB7B2;color:var(--red)}
+.info-banner.info{background:var(--blue-light);border:1px solid #B8CCEC;color:var(--blue)}
+.info-banner.ok{background:var(--accent-light);border:1px solid var(--accent-border);color:var(--accent)}
+
+/* ── USER MENU ── */
+#user-menu{position:absolute;bottom:56px;left:10px;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:6px;min-width:200px;display:none;z-index:50;box-shadow:var(--shadow-md)}
+#user-menu .menu-email{padding:8px 12px;font-size:11px;font-family:'Courier New',monospace;color:var(--text3);border-bottom:1px solid var(--border2);margin-bottom:4px}
+#user-menu button{display:block;width:100%;text-align:left;padding:8px 12px;background:none;border:none;color:var(--text);font-size:13px;font-weight:500;cursor:pointer;border-radius:6px;font-family:'Segoe UI',system-ui,-apple-system,sans-serif}
+#user-menu button:hover{background:var(--bg2)}
+#user-menu button.danger{color:var(--red)}
+
+/* ── LANDING PAGE ── */
+#landing{display:none;min-height:100vh;background:var(--bg)}
+.land-nav{display:flex;align-items:center;justify-content:space-between;padding:18px 48px;border-bottom:1px solid var(--border);background:var(--surface)}
+.land-hero{padding:80px 48px 60px;max-width:1000px;margin:0 auto;text-align:center}
+.land-hero h1{font-family:Georgia,serif;font-size:54px;line-height:1.1;font-weight:400;margin-bottom:22px;color:var(--text)}
+.land-hero p{font-size:18px;color:var(--text2);max-width:560px;margin:0 auto 38px;line-height:1.7}
+.land-features{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;padding:0 48px 60px;max-width:1100px;margin:0 auto}
+.land-feat{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:22px;box-shadow:var(--shadow)}
+.land-feat .icon{font-size:22px;margin-bottom:12px}
+.land-feat h3{font-size:14px;font-weight:600;margin-bottom:6px}
+.land-feat p{font-size:13px;color:var(--text2);line-height:1.6}
+.land-pricing{padding:0 48px 80px;max-width:960px;margin:0 auto}
+.land-pricing h2{font-family:Georgia,serif;font-size:36px;text-align:center;font-weight:400;margin-bottom:32px}
+.price-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+.price-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:28px;position:relative;box-shadow:var(--shadow)}
+.price-card.featured{border-color:var(--accent);background:var(--accent-light)}
+.price-card .featured-tag{position:absolute;top:-12px;left:50%;transform:translateX(-50%);background:var(--accent);color:white;font-size:9px;font-weight:700;padding:3px 12px;border-radius:20px;letter-spacing:1px;text-transform:uppercase;font-family:'Courier New',monospace;white-space:nowrap}
+.price-name{font-size:11px;font-weight:600;color:var(--text3);margin-bottom:8px;font-family:'Courier New',monospace;text-transform:uppercase;letter-spacing:1px}
+.price-amount{font-family:Georgia,serif;font-size:44px;color:var(--text);line-height:1;margin-bottom:4px}
+.price-period{font-size:12px;color:var(--text3);margin-bottom:20px}
+.price-features{list-style:none;margin-bottom:24px}
+.price-features li{font-size:13px;color:var(--text2);padding:6px 0;border-bottom:1px solid var(--border2);display:flex;gap:8px}
+.price-features li::before{content:'\2713';color:var(--accent);font-weight:700;flex-shrink:0}
+
+/* ── AUTH ── */
+#auth-screen{display:none;position:fixed;inset:0;background:rgba(244,242,238,0.95);backdrop-filter:blur(6px);z-index:999;align-items:center;justify-content:center}
+.auth-box{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:40px;width:100%;max-width:400px;box-shadow:var(--shadow-md)}
+.auth-box h1{font-family:Georgia,serif;font-size:28px;color:var(--accent);margin-bottom:4px;font-weight:400}
+.auth-box p{color:var(--text3);font-size:13px;margin-bottom:28px}
+.auth-tabs{display:flex;gap:3px;margin-bottom:24px;background:var(--bg2);border-radius:8px;padding:3px}
+.auth-tab{flex:1;padding:8px;border:none;border-radius:7px;font-size:13px;font-weight:600;cursor:pointer;background:none;color:var(--text3);transition:all 0.15s;font-family:'Segoe UI',system-ui,-apple-system,sans-serif}
+.auth-tab.active{background:var(--surface);color:var(--text);box-shadow:var(--shadow)}
+.auth-error{background:var(--red-light);border:1px solid #EBB7B2;border-radius:8px;padding:10px 14px;font-size:12px;color:var(--red);margin-bottom:14px;display:none}
+.auth-ok{background:var(--accent-light);border:1px solid var(--accent-border);border-radius:8px;padding:10px 14px;font-size:12px;color:var(--accent);margin-bottom:14px;display:none}
+
+/* ── ABC BADGES ── */
+.abc-a{background:#FFF3E0;color:#E65100;border:1px solid #FFCC80;font-family:'Courier New',monospace;font-size:9px;padding:2px 7px;border-radius:4px;font-weight:700}
+.abc-b{background:#E3F2FD;color:#1565C0;border:1px solid #90CAF9;font-family:'Courier New',monospace;font-size:9px;padding:2px 7px;border-radius:4px;font-weight:700}
+.abc-c{background:var(--bg2);color:var(--text3);border:1px solid var(--border);font-family:'Courier New',monospace;font-size:9px;padding:2px 7px;border-radius:4px;font-weight:700}
+</style>
+</head>
+<body>
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none">
+  <symbol id="ic-chart" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="18" y="3" width="4" height="18"/><rect x="10" y="8" width="4" height="13"/><rect x="2" y="13" width="4" height="8"/></symbol>
+  <symbol id="ic-scale" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="3" x2="12" y2="21"/><path d="M3 9l9-7 9 7"/><path d="M5 9l-2 6h6z"/><path d="M19 9l-2 6h6z"/></symbol>
+  <symbol id="ic-dollar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v12M9 10h4.5a2.5 2.5 0 010 5H9"/></symbol>
+  <symbol id="ic-refresh" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 014-4h14"/><path d="M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 01-4 4H3"/></symbol>
+  <symbol id="ic-tag" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/><circle cx="7" cy="7" r="1.5" fill="currentColor"/></symbol>
+  <symbol id="ic-clipboard" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="8" y="2" width="8" height="4" rx="1"/><rect x="3" y="6" width="18" height="16" rx="2"/><line x1="8" y1="11" x2="16" y2="11"/><line x1="8" y1="15" x2="16" y2="15"/></symbol>
+  <symbol id="ic-file" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/></symbol>
+  <symbol id="ic-gear" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></symbol>
+  <symbol id="ic-download" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></symbol>
+  <symbol id="ic-bell" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></symbol>
+  <symbol id="ic-doc" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/></symbol>
+  <symbol id="ic-warn" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><circle cx="12" cy="17" r="1" fill="currentColor"/></symbol>
+  <symbol id="ic-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></symbol>
+  <symbol id="ic-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></symbol>
+  <symbol id="ic-bulb" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="9" y1="18" x2="15" y2="18"/><line x1="10" y1="22" x2="14" y2="22"/><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0018 8 6 6 0 006 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 018.91 14"/></symbol>
+  <symbol id="ic-ruler" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 22L22 2M2 22h8M2 22v-8"/></symbol>
+  <symbol id="ic-info" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></symbol>
+  <symbol id="ic-arrow-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></symbol>
+</svg>
+
+<!-- ══ LANDING PAGE ════════════════════════════════════════════════ -->
+<div id="landing">
+  <div class="land-nav">
+    <div style="font-family:Georgia,serif;font-size:20px;color:var(--accent)">SubStox</div>
+    <div style="display:flex;gap:10px;align-items:center">
+      <button class="btn btn-outline btn-sm" onclick="showAuth('login')">Sign In</button>
+      <button class="btn btn-sm" onclick="showAuth('signup')">Start Free Trial</button>
+    </div>
+  </div>
+  <div class="land-hero">
+    <div style="font-family:'Courier New',monospace;font-size:10px;color:var(--accent);letter-spacing:2px;text-transform:uppercase;margin-bottom:16px;display:inline-block;background:var(--accent-light);padding:4px 12px;border-radius:20px;border:1px solid var(--accent-border)">Inventory Intelligence Platform</div>
+    <h1>Stop guessing.<br><em style="color:var(--accent)">Start knowing.</em></h1>
+    <p>SubStox gives mid-market operations teams real-time FIFO/LIFO costing, demand forecasting, supplier risk, and financial modeling — all in one clean dashboard.</p>
+    <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
+      <button class="btn" style="padding:12px 26px;font-size:14px" onclick="showAuth('signup')">Start 14-Day Free Trial</button>
+      <button class="btn btn-outline" style="padding:12px 26px;font-size:14px" onclick="demoLogin()">View Live Demo <svg width="13" height="13" style="vertical-align:middle;flex-shrink:0;"><use href="#ic-arrow-right"/></svg></button>
+    </div>
+    <div style="margin-top:18px;font-family:'Courier New',monospace;font-size:11px;color:var(--text3)">No credit card required · Cancel anytime · Set up in under 5 minutes</div>
+  </div>
+  <div class="land-features">
+    <div class="land-feat"><div class="icon"><svg width="16" height="16" style="vertical-align:middle;flex-shrink:0;"><use href="#ic-chart"/></svg></div><h3>Demand Forecasting</h3><p>ML-powered predictions with confidence intervals. Know exactly when to reorder before you stock out.</p></div>
+    <div class="land-feat"><div class="icon"><svg width="16" height="16" style="vertical-align:middle;flex-shrink:0;"><use href="#ic-scale"/></svg></div><h3>FIFO / LIFO Costing</h3><p>Toggle between costing methods instantly and see the full tax and margin impact in real time.</p></div>
+    <div class="land-feat"><div class="icon"><svg width="16" height="16" style="vertical-align:middle;flex-shrink:0;"><use href="#ic-dollar"/></svg></div><h3>Financial Modeling</h3><p>COGS analysis, cash flow forecasting, working capital optimization, and gross margin by SKU.</p></div>
+    <div class="land-feat"><div class="icon"><svg width="16" height="16" style="vertical-align:middle;flex-shrink:0;"><use href="#ic-refresh"/></svg></div><h3>Reorder Engine</h3><p>Auto-calculates optimal reorder quantities based on lead time, safety stock, and EOQ formula.</p></div>
+    <div class="land-feat"><div class="icon"><svg width="16" height="16" style="vertical-align:middle;flex-shrink:0;"><use href="#ic-tag"/></svg></div><h3>ABC Classification</h3><p>Automatically ranks every SKU by revenue contribution so your team focuses on what matters most.</p></div>
+    <div class="land-feat"><div class="icon"><svg width="16" height="16" style="vertical-align:middle;flex-shrink:0;"><use href="#ic-clipboard"/></svg></div><h3>Audit Log</h3><p>Every action is timestamped and logged. Essential for multi-staff operations and accounting review.</p></div>
+  </div>
+  <div class="land-pricing">
+    <h2>Simple, transparent pricing</h2>
+    <div class="price-grid">
+      <div class="price-card">
+        <div class="price-name">Starter</div>
+        <div class="price-amount">$49</div>
+        <div class="price-period">per month · billed monthly</div>
+        <ul class="price-features">
+          <li>Up to 200 SKUs</li><li>FIFO / LIFO costing</li><li>Demand forecasting</li><li>Purchase orders</li><li>Email alerts</li>
+        </ul>
+        <button class="btn btn-outline btn-full" onclick="showAuth('signup')">Start Free Trial</button>
+      </div>
+      <div class="price-card featured">
+        <div class="featured-tag">Most Popular</div>
+        <div class="price-name">Growth</div>
+        <div class="price-amount">$149</div>
+        <div class="price-period">per month · billed monthly</div>
+        <ul class="price-features">
+          <li>Unlimited SKUs</li><li>Financial modeling</li><li>ABC classification</li><li>Reorder engine + EOQ</li><li>Audit log</li><li>Supplier scorecards</li><li>CSV / Excel import</li><li>Priority support</li>
+        </ul>
+        <button class="btn btn-full" onclick="showAuth('signup')">Start Free Trial</button>
+      </div>
+      <div class="price-card">
+        <div class="price-name">Enterprise</div>
+        <div class="price-amount" style="font-size:32px;padding-top:6px">Custom</div>
+        <div class="price-period">annual contract</div>
+        <ul class="price-features">
+          <li>Multi-location inventory</li><li>ERP integrations (SAP, NetSuite)</li><li>Custom forecasting models</li><li>Dedicated account manager</li><li>SLA guarantee</li>
+        </ul>
+        <button class="btn btn-outline btn-full" onclick="showToast('Email sales@substox.io for pricing')">Contact Sales</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ AUTH SCREEN ══════════════════════════════════════════════════ -->
+<div id="auth-screen" style="display:none;position:fixed;inset:0;background:rgba(244,242,238,0.95);backdrop-filter:blur(6px);z-index:999;align-items:center;justify-content:center">
+  <div class="auth-box">
+    <h1>SubStox</h1>
+    <p>Inventory Intelligence Platform</p>
+    <div class="auth-tabs">
+      <button class="auth-tab active" onclick="switchTab('login')">Sign In</button>
+      <button class="auth-tab" onclick="switchTab('signup')">Create Account</button>
+    </div>
+    <div id="auth-error" class="auth-error"></div>
+    <div id="auth-ok" class="auth-ok"></div>
+    <div class="field"><label>Email</label><input id="auth-email" type="email" placeholder="you@company.com" onkeydown="if(event.key==='Enter')doAuth()"></div>
+    <div class="field"><label>Password</label><input id="auth-password" type="password" placeholder="••••••••" onkeydown="if(event.key==='Enter')doAuth()"></div>
+    <button class="btn btn-full" id="auth-btn" onclick="doAuth()">Sign In</button>
+    <div style="margin-top:14px;text-align:center;font-size:12px;color:var(--text3)">
+      <span style="cursor:pointer;text-decoration:underline;text-underline-offset:3px" onclick="demoLogin()">Skip — explore with demo data <svg width="13" height="13" style="vertical-align:middle;flex-shrink:0;"><use href="#ic-arrow-right"/></svg></span>
+    </div>
+    <div style="margin-top:10px;text-align:center"><button style="background:none;border:none;color:var(--text3);font-size:12px;cursor:pointer;font-family:'Segoe UI',system-ui,-apple-system,sans-serif" onclick="showLanding()">← Back to homepage</button></div>
+  </div>
+</div>
+
+<!-- ══ APP SHELL ════════════════════════════════════════════════════ -->
+<div id="app" style="display:none">
+  <div id="sidebar">
+    <div class="logo"><h1>SubStox</h1><p>Inventory Intelligence</p></div>
+    <nav>
+      <div class="nav-section">Overview</div>
+      <div class="nav-item active" onclick="goto('dashboard')"><span class="ni">◈</span> Dashboard</div>
+      <div class="nav-section" style="margin-top:6px">Inventory</div>
+      <div class="nav-item" onclick="goto('skus')"><span class="ni">▣</span> All SKUs</div>
+      <div class="nav-item" onclick="goto('abc')"><span class="ni">Ⅲ</span> ABC Analysis</div>
+      <div class="nav-item" onclick="goto('lots')"><span class="ni">⧖</span> FIFO / LIFO</div>
+      <div class="nav-item" onclick="goto('reorder')"><span class="ni">↻</span> Reorder Engine</div>
+      <div class="nav-item" onclick="goto('pos')"><span class="ni"><svg width="16" height="16" style="vertical-align:middle;flex-shrink:0;"><use href="#ic-clipboard"/></svg></span> Purchase Orders</div>
+      <div class="nav-section" style="margin-top:6px">Finance</div>
+      <div class="nav-item" onclick="goto('finance')"><span class="ni">$</span> Financial Model</div>
+      <div class="nav-section" style="margin-top:6px">Supply Chain</div>
+      <div class="nav-item" onclick="goto('suppliers')"><span class="ni">◉</span> Suppliers</div>
+      <div class="nav-item" onclick="goto('alerts')"><span class="ni"><svg width="16" height="16" style="vertical-align:middle;flex-shrink:0;"><use href="#ic-bell"/></svg></span> <span style="flex:1">Alerts</span><span class="nbadge" id="alert-badge" style="display:none">0</span></div>
+      <div class="nav-section" style="margin-top:6px">Settings</div>
+      <div class="nav-item" onclick="goto('audit')"><span class="ni"><svg width="16" height="16" style="vertical-align:middle;flex-shrink:0;"><use href="#ic-file"/></svg></span> Audit Log</div>
+      <div class="nav-item" onclick="goto('rules')"><span class="ni"><svg width="16" height="16" style="vertical-align:middle;flex-shrink:0;"><use href="#ic-gear"/></svg></span> Alert Rules</div>
+      <div class="nav-item" onclick="goto('import')"><span class="ni"><svg width="16" height="16" style="vertical-align:middle;flex-shrink:0;"><use href="#ic-download"/></svg></span> Import Data</div>
+    </nav>
+    <div class="user-area" onclick="toggleUserMenu()">
+      <div class="avatar" id="user-avatar">JM</div>
+      <div><div style="font-size:12px;font-weight:600" id="user-name">Jamie M.</div><div style="font-family:'Courier New',monospace;font-size:10px;color:var(--text3)" id="user-email">demo@substox.io</div></div>
+    </div>
+    <div id="user-menu">
+      <div class="menu-email" id="menu-email">demo@substox.io</div>
+      <button onclick="goto('import')"><svg width="16" height="16" style="vertical-align:middle;flex-shrink:0;"><use href="#ic-download"/></svg> Import Data</button>
+      <button onclick="goto('audit')"><svg width="16" height="16" style="vertical-align:middle;flex-shrink:0;"><use href="#ic-file"/></svg> Audit Log</button>
+      <button class="danger" onclick="signOut()">Sign Out</button>
+    </div>
+  </div>
+
+  <div id="main">
+    <div id="topbar">
+      <div style="font-family:Georgia,serif;font-size:22px;color:var(--text);" id="page-title">Demand Overview</div>
+      <div style="display:flex;align-items:center;gap:10px;margin-left:auto">
+        <div id="sync-indicator" class="tag tag-gold">Demo Mode</div>
+        <div style="font-family:'Courier New',monospace;font-size:11px;color:var(--text3)" id="topbar-date">—</div>
+      </div>
+    </div>
+    <div id="content">
+
+      <!-- ══ DASHBOARD ══════════════════════════════════════════════ -->
+      <div id="page-dashboard" class="page active">
+        <div class="info-banner warn" id="dash-warning">
+          <span><svg width="14" height="14" style="vertical-align:middle;flex-shrink:0;"><use href="#ic-warn"/></svg></span>
+          <span style="flex:1"><strong>3 SKUs</strong> at stockout risk — immediate purchase orders recommended</span>
+          <span style="font-size:11px;cursor:pointer;font-weight:700;font-family:'Courier New',monospace" onclick="goto('reorder')">View Reorder Engine <svg width="13" height="13" style="vertical-align:middle;flex-shrink:0;"><use href="#ic-arrow-right"/></svg></span>
+        </div>
+        <div class="kpi-grid">
+          <div class="kpi" style="border-top:3px solid var(--blue)"><span class="kpi-label">Inventory Value</span><div class="kpi-val">$2.42M</div><div class="kpi-sub" style="color:var(--accent)">▲ +8.3% demand trend</div></div>
+          <div class="kpi" style="border-top:3px solid var(--red)"><span class="kpi-label">Stockout Risk SKUs</span><div class="kpi-val">3</div><div class="kpi-sub" style="color:var(--red)">7 unread alerts</div></div>
+          <div class="kpi" style="border-top:3px solid var(--accent)"><span class="kpi-label">Gross Margin (FIFO)</span><div class="kpi-val">38.4%</div><div class="kpi-sub" style="color:var(--accent)">↑ vs 35.2% LIFO</div></div>
+          <div class="kpi" style="border-top:3px solid var(--orange)"><span class="kpi-label">Working Capital</span><div class="kpi-val">$1.84M</div><div class="kpi-sub" style="color:var(--text3)">$360K optimization opp.</div></div>
+        </div>
+        <div class="two-col">
+          <div class="card">
+            <div class="card-head"><div><h3>Demand Forecast — All SKUs</h3><div class="sub" style="margin-top:2px">Actuals + 60-day projection</div></div><span class="tag tag-green">ML Active</span></div>
+            <div style="padding:16px 20px 14px">
+              <svg viewBox="0 0 520 148" style="width:100%;height:148px;overflow:visible">
+                <defs>
+                  <linearGradient id="ga" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stop-color="#1D6F42" stop-opacity="0.15"/><stop offset="95%" stop-color="#1D6F42" stop-opacity="0"/></linearGradient>
+                  <linearGradient id="gf" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stop-color="#1A4D8F" stop-opacity="0.12"/><stop offset="95%" stop-color="#1A4D8F" stop-opacity="0"/></linearGradient>
+                </defs>
+                <line x1="38" y1="15" x2="510" y2="15" stroke="#DDD9D2" stroke-width="1"/><line x1="38" y1="45" x2="510" y2="45" stroke="#DDD9D2" stroke-width="1"/><line x1="38" y1="75" x2="510" y2="75" stroke="#DDD9D2" stroke-width="1"/><line x1="38" y1="105" x2="510" y2="105" stroke="#DDD9D2" stroke-width="1"/>
+                <text x="33" y="19" text-anchor="end" font-size="9" fill="#9C9591" font-family="Courier New">2.4k</text><text x="33" y="49" text-anchor="end" font-size="9" fill="#9C9591" font-family="Courier New">2.0k</text><text x="33" y="79" text-anchor="end" font-size="9" fill="#9C9591" font-family="Courier New">1.6k</text><text x="33" y="109" text-anchor="end" font-size="9" fill="#9C9591" font-family="Courier New">1.2k</text>
+                <text x="38" y="140" text-anchor="middle" font-size="9" fill="#9C9591" font-family="Courier New">Dec</text><text x="152" y="140" text-anchor="middle" font-size="9" fill="#9C9591" font-family="Courier New">Jan</text><text x="266" y="140" text-anchor="middle" font-size="9" fill="#9C9591" font-family="Courier New">Feb</text><text x="342" y="140" text-anchor="middle" font-size="9" fill="#9C9591" font-family="Courier New">Mar</text><text x="430" y="140" text-anchor="middle" font-size="9" fill="#9C9591" font-family="Courier New">Apr <svg width="13" height="13" style="vertical-align:middle;flex-shrink:0;"><use href="#ic-arrow-right"/></svg></text>
+                <path d="M38,62 L67,65 L95,35 L124,51 L152,85 L181,79 L209,69 L238,65 L266,61 L295,52 L323,54 L342,49 L361,47 L361,122 L38,122 Z" fill="url(#ga)"/>
+                <path d="M361,47 L380,43 L399,38 L418,35 L437,32 L456,28 L475,25 L510,21 L510,122 L361,122 Z" fill="url(#gf)"/>
+                <path d="M38,62 L67,65 L95,35 L124,51 L152,85 L181,79 L209,69 L238,65 L266,61 L295,52 L323,54 L342,49 L361,47" fill="none" stroke="#1D6F42" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M361,47 L380,43 L399,38 L418,35 L437,32 L456,28 L475,25 L510,21" fill="none" stroke="#1A4D8F" stroke-width="2" stroke-dasharray="6 4" stroke-linecap="round"/>
+                <line x1="361" y1="8" x2="361" y2="122" stroke="#6B6460" stroke-width="1" stroke-opacity="0.3" stroke-dasharray="3 3"/>
+                <rect x="340" y="6" width="44" height="14" rx="4" fill="#EDEAE4"/><text x="362" y="17" text-anchor="middle" font-size="8" fill="#6B6460" font-family="Courier New">TODAY</text>
+              </svg>
+              <div style="display:flex;gap:16px;margin-top:8px">
+                <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text3);font-family:'Courier New',monospace"><div style="width:10px;height:3px;border-radius:2px;background:#1D6F42"></div>Actual</div>
+                <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text3);font-family:'Courier New',monospace"><div style="width:10px;height:3px;border-radius:2px;background:#1A4D8F;opacity:0.6"></div>Forecast</div>
+              </div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-head"><h3>SKU Health</h3></div>
+            <div style="padding:18px" id="health-bars"></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-head"><h3>Recent Alerts</h3><span class="tag tag-red">4 Unread</span></div>
+          <div id="dash-alerts"></div>
+        </div>
+      </div>
+
+      <!-- ══ SKU CATALOG ════════════════════════════════════════════ -->
+      <div id="page-skus" class="page">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+          <div class="section-title" style="margin-bottom:0">SKU <em>Catalog</em></div>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-outline btn-sm" onclick="goto('import')"><svg width="16" height="16" style="vertical-align:middle;flex-shrink:0;"><use href="#ic-download"/></svg> Import CSV</button>
+            <button class="btn btn-sm" onclick="openModal('add-sku')">+ Add SKU</button>
+          </div>
+        </div>
+        <div class="card"><table><thead><tr><th>Code</th><th>Name</th><th>Category</th><th>ABC</th><th>Stock</th><th>Days Left</th><th>Margin</th><th>Reorder Pt</th><th>Status</th></tr></thead><tbody id="sku-tbody"></tbody></table></div>
+      </div>
+
+      <!-- ══ ABC ANALYSIS ═══════════════════════════════════════════ -->
+      <div id="page-abc" class="page">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+          <div class="section-title" style="margin-bottom:0">ABC <em>Classification</em></div>
+          <span class="tag tag-green">Auto-calculated · Updated daily</span>
+        </div>
+        <div style="font-size:13px;color:var(--text2);margin-bottom:20px;padding:12px 16px;background:var(--blue-light);border:1px solid #B8CCEC;border-radius:8px">
+          <strong style="color:var(--blue)">ABC Analysis</strong> ranks every SKU by its contribution to total revenue. <strong>A items</strong> (top 70%) need the tightest control. <strong>B items</strong> (next 20%) get moderate attention. <strong>C items</strong> (bottom 10%) can be managed loosely or discontinued.
+        </div>
+        <div class="kpi-grid-3">
+          <div class="kpi" style="border-top:3px solid #E65100">
+            <span class="kpi-label">Class A SKUs</span>
+            <div class="kpi-val" style="font-size:36px">2</div>
+            <div class="kpi-sub" style="color:#E65100">70.1% of revenue · Highest priority</div>
+          </div>
+          <div class="kpi" style="border-top:3px solid var(--blue)">
+            <span class="kpi-label">Class B SKUs</span>
+            <div class="kpi-val" style="font-size:36px">2</div>
+            <div class="kpi-sub" style="color:var(--blue)">21.4% of revenue · Medium priority</div>
+          </div>
+          <div class="kpi" style="border-top:3px solid var(--text3)">
+            <span class="kpi-label">Class C SKUs</span>
+            <div class="kpi-val" style="font-size:36px">2</div>
+            <div class="kpi-sub" style="color:var(--text3)">8.5% of revenue · Review for discontinuation</div>
+          </div>
+        </div>
+        <div class="card" style="margin-bottom:16px">
+          <div class="card-head"><h3>Revenue Contribution by SKU</h3><span class="sub">Pareto analysis — sorted by contribution</span></div>
+          <div style="padding:20px" id="abc-chart"></div>
+        </div>
+        <div class="card">
+          <div class="card-head"><h3>SKU Classification Table</h3></div>
+          <table><thead><tr><th>SKU</th><th>Class</th><th>Revenue</th><th>Cumulative %</th><th>Margin</th><th>Recommendation</th></tr></thead>
+          <tbody id="abc-tbody"></tbody></table>
+        </div>
+      </div>
+
+      <!-- ══ FIFO/LIFO ══════════════════════════════════════════════ -->
+      <div id="page-lots" class="page">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+          <div class="section-title" style="margin-bottom:0">Costing <em>&amp; Aging</em></div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <span style="font-size:11px;color:var(--text3);font-family:'Courier New',monospace;text-transform:uppercase;letter-spacing:1px">Method:</span>
+            <div class="method-toggle">
+              <button class="method-btn active" id="btn-FIFO" onclick="setMethod('FIFO')">FIFO</button>
+              <button class="method-btn" id="btn-LIFO" onclick="setMethod('LIFO')">LIFO</button>
+              <button class="method-btn" id="btn-WEIGHTED_AVG" onclick="setMethod('WEIGHTED_AVG')">W.AVG</button>
+            </div>
+            <button class="btn btn-blue btn-sm" onclick="openModal('record-sale')">Record Sale</button>
+            <button class="btn btn-sm" onclick="openModal('add-lot')">+ Add Lot</button>
+          </div>
+        </div>
+        <div id="method-desc" style="font-family:'Courier New',monospace;font-size:11px;color:var(--text2);padding:10px 16px;background:var(--accent-light);border:1px solid var(--accent-border);border-radius:8px;margin-bottom:16px"></div>
+        <div class="kpi-grid-3" id="lots-kpis"></div>
+        <div class="two-col-lots">
+          <div class="card">
+            <div class="card-head"><div><h3>Lot Aging Tracker</h3><div class="sub" style="margin-top:2px" id="lots-sort-label">FIFO priority</div></div><span class="tag tag-red" id="expiring-badge" style="display:none">0 Expiring</span></div>
+            <table><thead><tr><th>SKU / Lot</th><th>Received</th><th>Qty</th><th>Cost</th><th>Age</th><th>Priority</th></tr></thead><tbody id="lots-tbody"></tbody></table>
+          </div>
+          <div class="right-stack">
+            <div class="card" id="cogs-compare"></div>
+            <div id="expiry-alerts-panel"></div>
+            <div id="sale-result-panel"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ REORDER ENGINE ═════════════════════════════════════════ -->
+      <div id="page-reorder" class="page">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+          <div class="section-title" style="margin-bottom:0">Reorder <em>Engine</em></div>
+          <button class="btn btn-sm" onclick="openModal('eoq-calc')"><svg width="14" height="14" style="vertical-align:middle;flex-shrink:0;"><use href="#ic-ruler"/></svg> EOQ Calculator</button>
+        </div>
+        <div class="info-banner info" style="margin-bottom:20px">
+          <span><svg width="14" height="14" style="vertical-align:middle;flex-shrink:0;"><use href="#ic-info"/></svg></span>
+          <span>Reorder quantities are calculated using <strong>Economic Order Quantity (EOQ)</strong> + your lead time and safety stock settings. Adjust thresholds in <strong>Alert Rules</strong>.</span>
+        </div>
+        <div class="kpi-grid-3" style="margin-bottom:20px">
+          <div class="kpi" style="border-top:3px solid var(--red)"><span class="kpi-label">Immediate Action</span><div class="kpi-val">3</div><div class="kpi-sub" style="color:var(--red)">Order now or risk stockout</div></div>
+          <div class="kpi" style="border-top:3px solid var(--orange)"><span class="kpi-label">Order This Week</span><div class="kpi-val">2</div><div class="kpi-sub" style="color:var(--orange)">Within 7-day window</div></div>
+          <div class="kpi" style="border-top:3px solid var(--accent)"><span class="kpi-label">Total PO Value</span><div class="kpi-val">$31.8K</div><div class="kpi-sub" style="color:var(--text3)">Estimated order value</div></div>
+        </div>
+        <div class="card">
+          <div class="card-head"><h3>Reorder Recommendations</h3><span class="sub">Sorted by urgency</span></div>
+          <table><thead><tr><th>SKU</th><th>Current Stock</th><th>Days Left</th><th>Lead Time</th><th>Safety Stock</th><th>EOQ</th><th>Suggested Order</th><th>Est. Cost</th><th>Urgency</th><th></th></tr></thead>
+          <tbody id="reorder-tbody"></tbody></table>
+        </div>
+      </div>
+
+      <!-- ══ PURCHASE ORDERS ════════════════════════════════════════ -->
+      <div id="page-pos" class="page">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+          <div class="section-title" style="margin-bottom:0">Purchase <em>Orders</em></div>
+          <button class="btn btn-sm" onclick="openModal('create-po')">+ Create PO</button>
+        </div>
+        <div class="card"><table><thead><tr><th>PO #</th><th>SKU</th><th>Supplier</th><th>Qty</th><th>Total</th><th>Expected</th><th>Status</th><th>Notes</th><th></th></tr></thead><tbody id="po-tbody"></tbody></table></div>
+      </div>
+
+      <!-- ══ FINANCIAL MODEL ════════════════════════════════════════ -->
+      <div id="page-finance" class="page">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+          <div class="section-title" style="margin-bottom:0">Financial <em>Model</em></div>
+          <div class="tag tag-blue">Q1 2026 · FIFO Basis</div>
+        </div>
+        <div class="kpi-grid">
+          <div class="kpi" style="border-top:3px solid var(--accent)"><span class="kpi-label">Gross Revenue</span><div class="kpi-val">$568K</div><div class="kpi-sub" style="color:var(--accent)">▲ +12.4% vs Q4</div></div>
+          <div class="kpi" style="border-top:3px solid var(--orange)"><span class="kpi-label">COGS (FIFO)</span><div class="kpi-val">$348K</div><div class="kpi-sub" style="color:var(--text3)">$366K under LIFO</div></div>
+          <div class="kpi" style="border-top:3px solid var(--blue)"><span class="kpi-label">Gross Profit</span><div class="kpi-val">$220K</div><div class="kpi-sub" style="color:var(--accent)">38.4% margin</div></div>
+          <div class="kpi" style="border-top:3px solid var(--gold)"><span class="kpi-label">Working Capital</span><div class="kpi-val">$1.84M</div><div class="kpi-sub" style="color:var(--text3)">Tied up in inventory</div></div>
+        </div>
+        <div class="two-col-eq">
+          <div class="card">
+            <div class="card-head"><h3>COGS Breakdown by Category</h3></div>
+            <div style="padding:18px"><table><thead><tr><th>Category</th><th>COGS</th><th>Share</th><th>Units</th><th>Avg Cost</th></tr></thead><tbody>
+              <tr><td style="font-weight:600">Footwear</td><td style="font-family:'Courier New',monospace">$128,040</td><td><div style="display:flex;align-items:center;gap:8px"><div style="height:4px;width:58px;background:var(--accent);border-radius:2px"></div><span style="font-family:'Courier New',monospace;font-size:11px">36.8%</span></div></td><td style="font-family:'Courier New',monospace">2,910</td><td style="font-family:'Courier New',monospace">$44.00</td></tr>
+              <tr><td style="font-weight:600">Electronics</td><td style="font-family:'Courier New',monospace">$97,900</td><td><div style="display:flex;align-items:center;gap:8px"><div style="height:4px;width:44px;background:var(--blue);border-radius:2px"></div><span style="font-family:'Courier New',monospace;font-size:11px">28.1%</span></div></td><td style="font-family:'Courier New',monospace">1,100</td><td style="font-family:'Courier New',monospace">$89.00</td></tr>
+              <tr><td style="font-weight:600">Nutrition</td><td style="font-family:'Courier New',monospace">$71,820</td><td><div style="display:flex;align-items:center;gap:8px"><div style="height:4px;width:32px;background:var(--orange);border-radius:2px"></div><span style="font-family:'Courier New',monospace;font-size:11px">20.6%</span></div></td><td style="font-family:'Courier New',monospace">4,200</td><td style="font-family:'Courier New',monospace">$17.10</td></tr>
+              <tr><td style="font-weight:600">Fitness</td><td style="font-family:'Courier New',monospace">$31,450</td><td><div style="display:flex;align-items:center;gap:8px"><div style="height:4px;width:16px;background:var(--gold);border-radius:2px"></div><span style="font-family:'Courier New',monospace;font-size:11px">9.0%</span></div></td><td style="font-family:'Courier New',monospace">1,700</td><td style="font-family:'Courier New',monospace">$18.50</td></tr>
+              <tr><td style="font-weight:600">Apparel</td><td style="font-family:'Courier New',monospace">$18,990</td><td><div style="display:flex;align-items:center;gap:8px"><div style="height:4px;width:9px;background:var(--text3);border-radius:2px"></div><span style="font-family:'Courier New',monospace;font-size:11px">5.5%</span></div></td><td style="font-family:'Courier New',monospace">292</td><td style="font-family:'Courier New',monospace">$65.00</td></tr>
+            </tbody></table></div>
+          </div>
+          <div class="card">
+            <div class="card-head"><h3>Gross Margin by SKU</h3><span class="sub">FIFO basis</span></div>
+            <div style="padding:18px;display:flex;flex-direction:column;gap:11px" id="margin-by-sku"></div>
+          </div>
+        </div>
+        <div class="two-col-eq">
+          <div class="card">
+            <div class="card-head"><h3>Working Capital Analysis</h3></div>
+            <div style="padding:18px">
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
+                <div style="background:var(--surface2);border-radius:8px;padding:14px;border:1px solid var(--border2)"><div style="font-family:'Courier New',monospace;font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:6px">Inventory (Current)</div><div style="font-family:Georgia,serif;font-size:24px">$2.42M</div><div style="font-size:11px;color:var(--orange);font-family:'Courier New',monospace;margin-top:3px">↑ $88K excess stock</div></div>
+                <div style="background:var(--surface2);border-radius:8px;padding:14px;border:1px solid var(--border2)"><div style="font-family:'Courier New',monospace;font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:6px">Days Inventory Outstanding</div><div style="font-family:Georgia,serif;font-size:24px;color:var(--gold)">47</div><div style="font-size:11px;color:var(--text3);font-family:'Courier New',monospace;margin-top:3px">Industry avg: 32 days</div></div>
+                <div style="background:var(--accent-light);border-radius:8px;padding:14px;border:1px solid var(--accent-border)"><div style="font-family:'Courier New',monospace;font-size:9px;color:var(--accent);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:6px">Capital Reduction Opp.</div><div style="font-family:Georgia,serif;font-size:24px;color:var(--accent)">$360K</div><div style="font-size:11px;color:var(--text3);font-family:'Courier New',monospace;margin-top:3px">If DIO matched industry</div></div>
+                <div style="background:var(--blue-light);border-radius:8px;padding:14px;border:1px solid #B8CCEC"><div style="font-family:'Courier New',monospace;font-size:9px;color:var(--blue);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:6px">Stock-to-Sales Ratio</div><div style="font-family:Georgia,serif;font-size:24px;color:var(--blue)">4.3x</div><div style="font-size:11px;color:var(--text3);font-family:'Courier New',monospace;margin-top:3px">Target: &lt;3.0x</div></div>
+              </div>
+              <div style="background:var(--accent-light);border:1px solid var(--accent-border);border-radius:8px;padding:12px 14px"><div style="font-family:'Courier New',monospace;font-size:9px;color:var(--accent);font-weight:700;margin-bottom:5px"><svg width="14" height="14" style="vertical-align:middle;flex-shrink:0;"><use href="#ic-bulb"/></svg> RECOMMENDATION</div><div style="font-size:12px;color:var(--text2);line-height:1.6">Reducing Winter Jacket XL (185 days on hand) via 20% markdown would free <strong>$82,550</strong> in working capital this quarter.</div></div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-head"><h3>FIFO vs LIFO — Full P&amp;L Impact</h3></div>
+            <div style="padding:18px">
+              <table><thead><tr><th>Metric</th><th style="color:var(--accent)">FIFO</th><th style="color:var(--blue)">LIFO</th><th>Delta</th></tr></thead><tbody>
+                <tr><td>COGS</td><td style="font-family:'Courier New',monospace;color:var(--accent)">$348,200</td><td style="font-family:'Courier New',monospace;color:var(--blue)">$366,600</td><td style="font-family:'Courier New',monospace;color:var(--orange)">+$18,400</td></tr>
+                <tr><td>Gross Profit</td><td style="font-family:'Courier New',monospace;color:var(--accent)">$219,800</td><td style="font-family:'Courier New',monospace;color:var(--blue)">$201,400</td><td style="font-family:'Courier New',monospace;color:var(--red)">-$18,400</td></tr>
+                <tr><td>Gross Margin</td><td style="font-family:'Courier New',monospace;color:var(--accent)">38.4%</td><td style="font-family:'Courier New',monospace;color:var(--blue)">35.2%</td><td style="font-family:'Courier New',monospace;color:var(--red)">-3.2pp</td></tr>
+                <tr><td>Tax (est. 25%)</td><td style="font-family:'Courier New',monospace;color:var(--orange)">$54,950</td><td style="font-family:'Courier New',monospace;color:var(--accent)">$50,350</td><td style="font-family:'Courier New',monospace;color:var(--accent)">-$4,600</td></tr>
+                <tr><td>Net Income</td><td style="font-family:'Courier New',monospace;color:var(--accent)">$164,850</td><td style="font-family:'Courier New',monospace;color:var(--blue)">$151,050</td><td style="font-family:'Courier New',monospace;color:var(--red)">-$13,800</td></tr>
+                <tr><td>Ending Inventory</td><td style="font-family:'Courier New',monospace;color:var(--accent)">$2,418,500</td><td style="font-family:'Courier New',monospace;color:var(--orange)">$2,400,100</td><td style="font-family:'Courier New',monospace;color:var(--red)">-$18,400</td></tr>
+              </tbody></table>
+              <div style="margin-top:14px;padding:12px 14px;background:var(--blue-light);border:1px solid #B8CCEC;border-radius:8px;font-size:12px;color:var(--text2);line-height:1.6"><strong style="color:var(--blue)">LIFO saves $4,600 in taxes</strong> but reports $13,800 less net income. In rising-cost environments, LIFO is better for cash flow; FIFO is better for investor optics.</div>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-head"><h3>Cash Flow Forecast — Next 90 Days</h3><span class="sub">Based on current POs + demand forecast</span></div>
+          <div style="padding:18px">
+            <table><thead><tr><th>Period</th><th>Projected Revenue</th><th>COGS Outflow</th><th>PO Payments</th><th>Net Cash Flow</th><th>Cumulative</th></tr></thead><tbody>
+              <tr><td style="font-weight:600">Mar 2026</td><td style="font-family:'Courier New',monospace;color:var(--accent)">$194,000</td><td style="font-family:'Courier New',monospace;color:var(--orange)">$118,000</td><td style="font-family:'Courier New',monospace;color:var(--orange)">$31,760</td><td style="font-family:'Courier New',monospace;color:var(--accent)">+$44,240</td><td style="font-family:'Courier New',monospace">$44,240</td></tr>
+              <tr><td style="font-weight:600">Apr 2026</td><td style="font-family:'Courier New',monospace;color:var(--accent)">$210,000</td><td style="font-family:'Courier New',monospace;color:var(--orange)">$128,000</td><td style="font-family:'Courier New',monospace;color:var(--orange)">$17,800</td><td style="font-family:'Courier New',monospace;color:var(--accent)">+$64,200</td><td style="font-family:'Courier New',monospace">$108,440</td></tr>
+              <tr><td style="font-weight:600">May 2026</td><td style="font-family:'Courier New',monospace;color:var(--accent)">$228,000</td><td style="font-family:'Courier New',monospace;color:var(--orange)">$139,000</td><td style="font-family:'Courier New',monospace;color:var(--orange)">$10,560</td><td style="font-family:'Courier New',monospace;color:var(--accent)">+$78,440</td><td style="font-family:'Courier New',monospace;color:var(--accent)">$186,880</td></tr>
+            </tbody></table>
+            <div style="margin-top:14px;display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
+              <div style="background:var(--accent-light);border:1px solid var(--accent-border);border-radius:8px;padding:12px 14px;text-align:center"><div style="font-family:'Courier New',monospace;font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:5px">90-Day Net Cash</div><div style="font-family:Georgia,serif;font-size:22px;color:var(--accent)">+$186,880</div></div>
+              <div style="background:var(--orange-light);border:1px solid #EDCBA8;border-radius:8px;padding:12px 14px;text-align:center"><div style="font-family:'Courier New',monospace;font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:5px">Total PO Commitments</div><div style="font-family:Georgia,serif;font-size:22px;color:var(--orange)">$60,120</div></div>
+              <div style="background:var(--blue-light);border:1px solid #B8CCEC;border-radius:8px;padding:12px 14px;text-align:center"><div style="font-family:'Courier New',monospace;font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:5px">Projected Inventory Turn</div><div style="font-family:Georgia,serif;font-size:22px;color:var(--blue)">7.8x</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ SUPPLIERS ══════════════════════════════════════════════ -->
+      <div id="page-suppliers" class="page">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+          <div class="section-title" style="margin-bottom:0">Supplier <em>Scorecards</em></div>
+          <button class="btn btn-sm" onclick="openModal('add-supplier')">+ Add Supplier</button>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px" id="sup-grid"></div>
+      </div>
+
+      <!-- ══ ALERTS ══════════════════════════════════════════════════ -->
+      <div id="page-alerts" class="page">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+          <div class="section-title" style="margin-bottom:0">Alert <em>Center</em></div>
+          <button class="btn btn-outline btn-sm" onclick="markAllRead()">Mark all read</button>
+        </div>
+        <div id="alerts-list" style="display:flex;flex-direction:column;gap:10px"></div>
+      </div>
+
+      <!-- ══ AUDIT LOG ═══════════════════════════════════════════════ -->
+      <div id="page-audit" class="page">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+          <div class="section-title" style="margin-bottom:0">Audit <em>Log</em></div>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-outline btn-sm" onclick="downloadAuditLog()">⬇ Export CSV</button>
+            <button class="btn btn-outline btn-sm btn-red" onclick="clearAuditLog()">Clear Log</button>
+          </div>
+        </div>
+        <div class="info-banner info" style="margin-bottom:20px">
+          <span><svg width="14" height="14" style="vertical-align:middle;flex-shrink:0;"><use href="#ic-info"/></svg></span>
+          <span>Every action in SubStox is automatically recorded with a timestamp and user. Required for accounting reviews, staff accountability, and compliance.</span>
+        </div>
+        <div class="card">
+          <div class="card-head"><h3>Activity Log</h3><span class="sub" id="audit-count">0 entries</span></div>
+          <table><thead><tr><th>Timestamp</th><th>User</th><th>Action</th><th>Entity</th><th>Details</th></tr></thead>
+          <tbody id="audit-tbody"></tbody></table>
+        </div>
+      </div>
+
+      <!-- ══ ALERT RULES ══════════════════════════════════════════ -->
+      <div id="page-rules" class="page">
+        <div class="section-title">Alert <em>Rules</em></div>
+        <div class="info-banner info" style="margin-bottom:20px">
+          <span><svg width="14" height="14" style="vertical-align:middle;flex-shrink:0;"><use href="#ic-info"/></svg></span>
+          <span>Customize when SubStox sends you alerts. These thresholds override the defaults for your account.</span>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+          <div class="card">
+            <div class="card-head"><h3>Stock Level Rules</h3></div>
+            <div style="padding:20px;display:flex;flex-direction:column;gap:14px" id="rules-stock">
+              <div class="field"><label>Stockout Warning — Days of Stock Below</label><div style="display:flex;gap:8px;align-items:center"><input id="rule-stockout" type="number" value="14" style="width:80px"><span style="font-size:12px;color:var(--text3)">days</span><span class="tag tag-red" style="margin-left:auto">CRITICAL alert</span></div></div>
+              <div class="field"><label>Low Stock Warning — Days of Stock Below</label><div style="display:flex;gap:8px;align-items:center"><input id="rule-lowstock" type="number" value="30" style="width:80px"><span style="font-size:12px;color:var(--text3)">days</span><span class="tag tag-orange" style="margin-left:auto">HIGH alert</span></div></div>
+              <div class="field"><label>Excess Stock Warning — Days of Stock Above</label><div style="display:flex;gap:8px;align-items:center"><input id="rule-excess" type="number" value="120" style="width:80px"><span style="font-size:12px;color:var(--text3)">days</span><span class="tag tag-gold" style="margin-left:auto">LOW alert</span></div></div>
+              <button class="btn btn-sm" onclick="saveRules()">Save Stock Rules</button>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-head"><h3>Supplier &amp; Expiry Rules</h3></div>
+            <div style="padding:20px;display:flex;flex-direction:column;gap:14px">
+              <div class="field"><label>Supplier On-Time Rate — Alert Below</label><div style="display:flex;gap:8px;align-items:center"><input id="rule-supplier" type="number" value="80" style="width:80px"><span style="font-size:12px;color:var(--text3)">%</span><span class="tag tag-red" style="margin-left:auto">HIGH alert</span></div></div>
+              <div class="field"><label>Expiry Alert — Days Until Expiry Below</label><div style="display:flex;gap:8px;align-items:center"><input id="rule-expiry" type="number" value="45" style="width:80px"><span style="font-size:12px;color:var(--text3)">days</span><span class="tag tag-orange" style="margin-left:auto">MEDIUM alert</span></div></div>
+              <div class="field"><label>FIFO Violation — Alert When Lots Out of Order</label><div style="display:flex;gap:8px;align-items:center"><select id="rule-fifo" style="width:auto"><option value="yes">Yes — Alert me</option><option value="no">No — Don't alert</option></select></div></div>
+              <button class="btn btn-sm" onclick="saveRules()">Save Supplier Rules</button>
+            </div>
+          </div>
+          <div class="card" style="grid-column:span 2">
+            <div class="card-head"><h3>Current Active Rules</h3></div>
+            <div style="padding:16px;display:flex;flex-wrap:wrap;gap:8px" id="rules-display"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ IMPORT DATA ═════════════════════════════════════════════ -->
+      <div id="page-import" class="page">
+        <div class="section-title">Import <em>Data</em></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+          <div class="card">
+            <div class="card-head"><h3><svg width="16" height="16" style="vertical-align:middle;flex-shrink:0;"><use href="#ic-download"/></svg> Import SKUs from CSV</h3></div>
+            <div style="padding:20px">
+              <div style="font-size:13px;color:var(--text2);line-height:1.7;margin-bottom:14px">Upload a CSV exported from Excel, Shopify, or your ERP. Required columns:</div>
+              <div style="background:var(--surface2);border-radius:8px;padding:10px 14px;font-family:'Courier New',monospace;font-size:11px;color:var(--accent);margin-bottom:14px;line-height:2;border:1px solid var(--border2)">sku_code, name, category, current_stock,<br>reorder_point, lead_time_days, unit_price</div>
+              <div class="upload-zone" onclick="document.getElementById('csv-file').click()" id="drop-zone">
+                <input type="file" id="csv-file" accept=".csv,.txt" onchange="handleCSV(this.files[0])">
+                <div style="font-size:26px;margin-bottom:8px"><svg width="28" height="28" style="vertical-align:middle;flex-shrink:0;"><use href="#ic-doc"/></svg></div>
+                <div style="font-weight:600;margin-bottom:4px">Click to upload or drag & drop</div>
+                <div style="font-size:12px;color:var(--text3)">CSV or TXT · Max 10MB</div>
+              </div>
+              <div id="csv-preview" style="display:none">
+                <div style="font-family:'Courier New',monospace;font-size:11px;color:var(--accent);margin-bottom:8px" id="csv-status"></div>
+                <div style="overflow:auto;max-height:180px;border:1px solid var(--border2);border-radius:8px" id="csv-table-wrap"></div>
+                <div style="display:flex;gap:8px;margin-top:12px">
+                  <button class="btn btn-full" id="csv-import-btn" onclick="importCSV()">Import All Rows</button>
+                  <button class="btn btn-outline" onclick="cancelCSV()">Cancel</button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-head"><h3><svg width="16" height="16" style="vertical-align:middle;flex-shrink:0;"><use href="#ic-clipboard"/></svg> Download Template</h3></div>
+            <div style="padding:20px">
+              <div style="font-size:13px;color:var(--text2);line-height:1.7;margin-bottom:18px">Download the pre-formatted template, fill in your products, and upload it above.</div>
+              <button class="btn btn-full" style="margin-bottom:12px" onclick="downloadTemplate()">⬇ Download CSV Template</button>
+              <div style="background:var(--surface2);border-radius:8px;padding:14px;border:1px solid var(--border2)">
+                <div style="font-family:'Courier New',monospace;font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:8px">Export Instructions</div>
+                <div style="font-size:12px;color:var(--text2);line-height:1.9">• Excel: File <svg width="13" height="13" style="vertical-align:middle;flex-shrink:0;"><use href="#ic-arrow-right"/></svg> Save As <svg width="13" height="13" style="vertical-align:middle;flex-shrink:0;"><use href="#ic-arrow-right"/></svg> CSV<br>• Shopify: Admin <svg width="13" height="13" style="vertical-align:middle;flex-shrink:0;"><use href="#ic-arrow-right"/></svg> Products <svg width="13" height="13" style="vertical-align:middle;flex-shrink:0;"><use href="#ic-arrow-right"/></svg> Export<br>• QuickBooks: Reports <svg width="13" height="13" style="vertical-align:middle;flex-shrink:0;"><use href="#ic-arrow-right"/></svg> Inventory Valuation<br>• Column names are not case-sensitive<br>• Blank cells use default values</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="card" style="margin-top:16px">
+          <div class="card-head"><h3>Import History</h3></div>
+          <div id="import-history" style="padding:18px;color:var(--text3);font-size:13px">No imports yet.</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODALS ════════════════════════════════════════════════════════ -->
+<div class="modal-overlay" id="modal-overlay" onclick="closeModal()">
+  <!-- Add SKU -->
+  <div class="modal" id="modal-add-sku" onclick="event.stopPropagation()" style="display:none">
+    <div class="modal-head"><h2>Add New SKU</h2><button class="modal-close" onclick="closeModal()">&times;</button></div>
+    <div class="grid2">
+      <div class="field"><label>SKU Code</label><input id="sku-code" placeholder="SKU-XXXX"></div>
+      <div class="field"><label>Name</label><input id="sku-name"></div>
+      <div class="field"><label>Category</label><input id="sku-cat"></div>
+      <div class="field"><label>Unit Price ($)</label><input id="sku-price" type="number" step="0.01"></div>
+      <div class="field"><label>Unit Cost ($)</label><input id="sku-ucost" type="number" step="0.01"></div>
+      <div class="field"><label>Lead Time (days)</label><input id="sku-lt" type="number" value="14"></div>
+      <div class="field"><label>Reorder Point</label><input id="sku-rop" type="number" value="0"></div>
+      <div class="field"><label>Safety Stock</label><input id="sku-safety" type="number" value="0"></div>
+      <div class="field"><label>Annual Demand (units)</label><input id="sku-demand" type="number" value="0"></div>
+      <div class="field"><label>Ordering Cost per PO ($)</label><input id="sku-ordcost" type="number" value="50"></div>
+    </div>
+    <div class="field"><label>Internal Notes</label><textarea id="sku-notes" placeholder="Optional notes about this SKU..."></textarea></div>
+    <button class="btn btn-full" onclick="saveSku()">Create SKU</button>
+  </div>
+  <!-- Add Lot -->
+  <div class="modal" id="modal-add-lot" onclick="event.stopPropagation()" style="display:none">
+    <div class="modal-head"><h2>Add Inventory Lot</h2><button class="modal-close" onclick="closeModal()">&times;</button></div>
+    <div class="field"><label>SKU</label><select id="lot-sku"></select></div>
+    <div class="grid2">
+      <div class="field"><label>Lot Number</label><input id="lot-num" placeholder="LOT-XXXX-A"></div>
+      <div class="field"><label>Received Date</label><input id="lot-recv" type="date"></div>
+      <div class="field"><label>Expiry Date (optional)</label><input id="lot-expiry" type="date"></div>
+      <div class="field"><label>Quantity</label><input id="lot-qty" type="number" value="0"></div>
+      <div class="field"><label>Unit Cost ($)</label><input id="lot-cost" type="number" step="0.01" value="0"></div>
+    </div>
+    <div class="field"><label>Notes</label><textarea id="lot-notes" placeholder="Supplier PO #, batch info..."></textarea></div>
+    <button class="btn btn-full" onclick="saveLot()">Add Lot</button>
+  </div>
+  <!-- Record Sale -->
+  <div class="modal" id="modal-record-sale" onclick="event.stopPropagation()" style="display:none">
+    <div class="modal-head"><h2>Record Sale</h2><button class="modal-close" onclick="closeModal()">&times;</button></div>
+    <div id="sale-method-info" style="font-family:'Courier New',monospace;font-size:11px;color:var(--text2);margin-bottom:14px;padding:10px 14px;background:var(--accent-light);border-radius:8px;border:1px solid var(--accent-border)"></div>
+    <div class="field"><label>SKU</label><select id="sale-sku"></select></div>
+    <div class="field"><label>Quantity Sold</label><input id="sale-qty" type="number" value="0"></div>
+    <div class="field"><label>Sale Notes (optional)</label><textarea id="sale-notes" placeholder="Order #, customer, channel..."></textarea></div>
+    <button class="btn btn-full" onclick="doSale()">Record Sale &amp; Calculate COGS</button>
+  </div>
+  <!-- Create PO -->
+  <div class="modal" id="modal-create-po" onclick="event.stopPropagation()" style="display:none">
+    <div class="modal-head"><h2>Create Purchase Order</h2><button class="modal-close" onclick="closeModal()">&times;</button></div>
+    <div class="field"><label>SKU</label><select id="po-sku"></select></div>
+    <div class="field"><label>Supplier</label><select id="po-sup"></select></div>
+    <div class="grid2">
+      <div class="field"><label>Quantity</label><input id="po-qty" type="number" value="0"></div>
+      <div class="field"><label>Unit Cost ($)</label><input id="po-cost" type="number" step="0.01" value="0"></div>
+      <div class="field"><label>Expected Delivery</label><input id="po-eta" type="date"></div>
+    </div>
+    <div id="po-total" style="font-family:'Courier New',monospace;font-size:11px;color:var(--accent);margin-bottom:10px;font-weight:600"></div>
+    <div class="field"><label>Internal Notes</label><textarea id="po-notes" placeholder="Reference numbers, special instructions..."></textarea></div>
+    <button class="btn btn-full" onclick="savePO()">Create PO</button>
+  </div>
+  <!-- Add Supplier -->
+  <div class="modal" id="modal-add-supplier" onclick="event.stopPropagation()" style="display:none">
+    <div class="modal-head"><h2>Add Supplier</h2><button class="modal-close" onclick="closeModal()">&times;</button></div>
+    <div class="grid2">
+      <div class="field"><label>Company Name</label><input id="sup-name"></div>
+      <div class="field"><label>Email</label><input id="sup-email"></div>
+      <div class="field"><label>Lead Time (days)</label><input id="sup-lt" type="number" value="14"></div>
+      <div class="field"><label>On-Time Rate (%)</label><input id="sup-ontime" type="number" value="95"></div>
+      <div class="field"><label>Fill Rate (%)</label><input id="sup-fill" type="number" value="98"></div>
+      <div class="field"><label>Payment Terms</label><select id="sup-terms"><option>Net 30</option><option>Net 60</option><option>Net 90</option><option>COD</option><option>Prepaid</option></select></div>
+    </div>
+    <div class="field"><label>Notes / History</label><textarea id="sup-notes" placeholder="Contact info, special conditions, relationship notes..."></textarea></div>
+    <button class="btn btn-full" onclick="saveSupplier()">Add Supplier</button>
+  </div>
+  <!-- EOQ Calculator -->
+  <div class="modal" id="modal-eoq-calc" onclick="event.stopPropagation()" style="display:none">
+    <div class="modal-head"><h2>EOQ Calculator</h2><button class="modal-close" onclick="closeModal()">&times;</button></div>
+    <div style="font-size:13px;color:var(--text2);margin-bottom:16px;line-height:1.6">The <strong>Economic Order Quantity</strong> formula minimizes total inventory cost by finding the optimal balance between ordering frequency and holding costs.</div>
+    <div class="grid3">
+      <div class="field"><label>Annual Demand (units)</label><input id="eoq-d" type="number" value="1200" oninput="calcEOQ()"></div>
+      <div class="field"><label>Ordering Cost per PO ($)</label><input id="eoq-s" type="number" value="50" oninput="calcEOQ()"></div>
+      <div class="field"><label>Annual Holding Cost ($)</label><input id="eoq-h" type="number" value="12" oninput="calcEOQ()"></div>
+    </div>
+    <div id="eoq-result" style="margin-top:4px;padding:16px;background:var(--accent-light);border:1px solid var(--accent-border);border-radius:10px;display:none">
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">
+        <div><div style="font-family:'Courier New',monospace;font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:5px">Optimal Order Qty</div><div style="font-family:Georgia,serif;font-size:28px;color:var(--accent)" id="eoq-qty">—</div></div>
+        <div><div style="font-family:'Courier New',monospace;font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:5px">Orders per Year</div><div style="font-family:Georgia,serif;font-size:28px;color:var(--blue)" id="eoq-freq">—</div></div>
+        <div><div style="font-family:'Courier New',monospace;font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:5px">Min Annual Cost</div><div style="font-family:Georgia,serif;font-size:28px;color:var(--accent)" id="eoq-cost">—</div></div>
+      </div>
+      <div style="margin-top:12px;font-size:12px;color:var(--text2);padding-top:10px;border-top:1px solid var(--accent-border)" id="eoq-formula"></div>
+    </div>
+    <button class="btn btn-full" style="margin-top:12px" onclick="closeModal()">Done</button>
+  </div>
+</div>
+
+<div id="toast" style="display:none;position:fixed;bottom:24px;right:24px;background:var(--surface);border-radius:10px;padding:12px 18px;z-index:200;font-size:13px;font-weight:600;box-shadow:var(--shadow-md);max-width:320px;border:1px solid var(--border)"></div>
+
+<script>
+// ══════════════════════════════════════════════════════════════════════
+// STOCKR — INVENTORY INTELLIGENCE PLATFORM
+// Configuration: paste your keys below
+// ══════════════════════════════════════════════════════════════════════
+const SUPABASE_URL = 'PASTE_YOUR_PROJECT_URL_HERE';
+const SUPABASE_KEY = 'PASTE_YOUR_ANON_KEY_HERE';
+const STRIPE_PAYMENT_LINK = 'https://buy.stripe.com/YOUR_LINK_HERE';
+// ══════════════════════════════════════════════════════════════════════
+
+const SUPABASE_READY = SUPABASE_URL !== 'PASTE_YOUR_PROJECT_URL_HERE';
+let sb = null, currentUser = null;
+
+// ── ALERT RULE DEFAULTS (user-editable in Alert Rules page) ──────────
+let RULES = { stockout:14, lowstock:30, excess:120, supplier:80, expiry:45, fifo:true };
+
+// ── AUDIT LOG ────────────────────────────────────────────────────────
+let AUDIT_LOG = [];
+function logAction(action, entity, details='') {
+  AUDIT_LOG.unshift({ ts: new Date().toISOString(), user: currentUser?.email||'Demo User', action, entity, details });
+  if(AUDIT_LOG.length > 500) AUDIT_LOG = AUDIT_LOG.slice(0,500);
+}
+
+// ── DEMO DATA ─────────────────────────────────────────────────────────
+let SKUS = [
+  {id:1,code:"SKU-0482",name:"Running Shoes M/10",cat:"Footwear",stock:42,days:11,status:"critical",rop:100,lt:18,price:89,ucost:44,safety:50,demand:1200,ordcost:60,margin:50.6,abc:'A',notes:"Top seller Q3-Q4. Watch sizing."},
+  {id:2,code:"SKU-0871",name:"Wireless Earbuds Pro",cat:"Electronics",stock:128,days:19,status:"low",rop:120,lt:21,price:149,ucost:89,safety:60,demand:980,ordcost:80,margin:40.3,abc:'A',notes:""},
+  {id:3,code:"SKU-0330",name:"Yoga Mat Premium",cat:"Fitness",stock:340,days:62,status:"healthy",rop:80,lt:14,price:38,ucost:18.5,safety:30,demand:800,ordcost:40,margin:51.3,abc:'B',notes:""},
+  {id:4,code:"SKU-1104",name:"Winter Jacket XL",cat:"Apparel",stock:127,days:180,status:"excess",rop:30,lt:30,price:120,ucost:72,safety:15,demand:320,ordcost:50,margin:40.0,abc:'B',notes:"Seasonal. Markdown if >120 days."},
+  {id:5,code:"SKU-0291",name:"Protein Powder 2lb",cat:"Nutrition",stock:294,days:35,status:"healthy",rop:150,lt:18,price:24,ucost:12.4,safety:80,demand:3600,ordcost:30,margin:48.3,abc:'C',notes:""},
+  {id:6,code:"SKU-0550",name:"Vitamin C 1000mg",cat:"Nutrition",stock:320,days:28,status:"low",rop:200,lt:10,price:14,ucost:6.8,safety:100,demand:4800,ordcost:25,margin:51.4,abc:'C',notes:""},
+];
+let LOTS = [
+  {id:1,lot:"LOT-0291-A",skuId:5,skuName:"Protein Powder 2lb",recv:"2023-11-14",expiry:"2026-03-28",qtyLeft:84,cost:12.40,age:117,expDays:18,notes:""},
+  {id:2,lot:"LOT-0291-B",skuId:5,skuName:"Protein Powder 2lb",recv:"2024-01-08",expiry:"2026-06-15",qtyLeft:210,cost:13.10,age:61,expDays:97,notes:""},
+  {id:3,lot:"LOT-0482-A",skuId:1,skuName:"Running Shoes M/10",recv:"2023-12-02",expiry:null,qtyLeft:42,cost:44.00,age:98,expDays:null,notes:"Pacific Supply Co. PO-AX7K2M"},
+  {id:4,lot:"LOT-0550-C",skuId:6,skuName:"Vitamin C 1000mg",recv:"2024-02-01",expiry:"2026-04-16",qtyLeft:320,cost:6.80,age:37,expDays:37,notes:""},
+  {id:5,lot:"LOT-0330-B",skuId:3,skuName:"Yoga Mat Premium",recv:"2024-02-19",expiry:null,qtyLeft:340,cost:18.50,age:19,expDays:null,notes:""},
+  {id:6,lot:"LOT-1104-A",skuId:4,skuName:"Winter Jacket XL",recv:"2023-09-01",expiry:null,qtyLeft:127,cost:65.00,age:185,expDays:null,notes:""},
+];
+let ALERTS = [
+  {id:1,title:"Stockout Risk: Running Shoes M/10",desc:"Will stock out in 11 days. Lead time is 18 days. EOQ suggests order of 240 units.",sev:"CRITICAL",read:false,sku:"Running Shoes M/10",date:"2026-03-09"},
+  {id:2,title:"Expiring Lot: LOT-0291-A",desc:"84 units of Protein Powder expiring in 18 days. $1,042 at risk. FIFO violation detected.",sev:"HIGH",read:false,sku:"Protein Powder 2lb",date:"2026-03-09"},
+  {id:3,title:"Supplier NXT-Logistics At Risk",desc:"On-time rate dropped to 61% — below your 80% threshold. 3 open POs affected.",sev:"HIGH",read:false,sku:null,date:"2026-03-08"},
+  {id:4,title:"Vitamin C — Low Stock",desc:"28 days of stock remaining, below your 30-day threshold. QuickShip has 7-day lead time.",sev:"MEDIUM",read:false,sku:"Vitamin C 1000mg",date:"2026-03-08"},
+  {id:5,title:"Excess Stock: Winter Jacket XL",desc:"127 units, 180 days on hand — above your 120-day excess threshold. Recommend markdown.",sev:"LOW",read:true,sku:"Winter Jacket XL",date:"2026-03-07"},
+  {id:6,title:"FIFO Violation Detected",desc:"Warehouse Zone B picking LOT-0291-B before LOT-0291-A. Older lot expires in 18 days.",sev:"MEDIUM",read:true,sku:"Protein Powder 2lb",date:"2026-03-07"},
+];
+let SUPPLIERS = [
+  {id:1,name:"NXT-Logistics",email:"orders@nxt.com",lt:18,ontime:61,fill:88,risk:"HIGH",terms:"Net 30",trend:"declining",notes:"3rd late delivery in 6 weeks."},
+  {id:2,name:"Pacific Supply Co.",email:"supply@pacific.com",lt:14,ontime:94,fill:98,risk:"LOW",terms:"Net 60",trend:"stable",notes:"Preferred footwear supplier."},
+  {id:3,name:"QuickShip Partners",email:"qs@quickship.com",lt:7,ontime:87,fill:95,risk:"MEDIUM",terms:"Net 30",trend:"improving",notes:"Good for urgent replenishment."},
+];
+let POS = [
+  {id:1,num:"PO-AX7K2M",sku:"Running Shoes M/10",sup:"Pacific Supply Co.",qty:240,total:10560,status:"DRAFT",eta:"2026-03-28",notes:"EOQ-recommended. Approved by Jamie M."},
+  {id:2,num:"PO-BQ9R4N",sku:"Vitamin C 1000mg",sup:"QuickShip Partners",qty:500,total:3400,status:"SENT",eta:"2026-03-17",notes:""},
+  {id:3,num:"PO-CZ3T8P",sku:"Wireless Earbuds Pro",sup:"NXT-Logistics",qty:200,total:17800,status:"CONFIRMED",eta:"2026-03-31",notes:"Monitor NXT delivery risk."},
+];
+let importHistory = [], csvRows = [];
+
+// ── HELPERS ───────────────────────────────────────────────────────────
+const fmt = n => '$'+Number(n||0).toLocaleString(undefined,{minimumFractionDigits:0,maximumFractionDigits:0});
+const fmtFull = n => '$'+Number(n||0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2});
+const daysColor = d => d<14?'var(--red)':d<30?'var(--orange)':'var(--accent)';
+const riskColor = r => r==='HIGH'?'var(--red)':r==='MEDIUM'?'var(--orange)':'var(--accent)';
+
+function tag(type, text) {
+  const map={critical:'tag-red',low:'tag-orange',healthy:'tag-green',excess:'tag-gold',unknown:'tag-gray',stockout:'tag-red',CRITICAL:'tag-red',HIGH:'tag-red',MEDIUM:'tag-orange',LOW:'tag-gold',DRAFT:'tag-gray',SENT:'tag-blue',CONFIRMED:'tag-green',RECEIVED:'tag-green'};
+  return `<span class="tag ${map[type]||'tag-gray'}">${text||type}</span>`;
+}
+
+function showToast(msg, type='ok') {
+  const t=document.getElementById('toast');
+  const icons={ok:'&#10003;',error:'&times;',warn:'[!]',info:'[i]'};
+  const colors={ok:'var(--accent)',error:'var(--red)',warn:'var(--orange)',info:'var(--blue)'};
+  const c=colors[type]||colors.ok;
+  t.style.borderColor=c;
+  t.innerHTML=`<span style="color:${c};font-size:16px">${icons[type]||'&#10003;'}</span><span>${msg}</span>`;
+  t.style.display='flex';
+  clearTimeout(t._t);t._t=setTimeout(()=>t.style.display='none',3500);
+}
+
+// ── DB LAYER ──────────────────────────────────────────────────────────
+const DB = {
+  async getSkus(){if(!sb||!currentUser)return SKUS;const{data,error}=await sb.from('skus').select('*').eq('user_id',currentUser.id).order('created_at',{ascending:false});if(error)return SKUS;return data.map(r=>({id:r.id,code:r.sku_code,name:r.name,cat:r.category,stock:r.current_stock||0,days:r.days_of_stock||0,status:r.status||'unknown',rop:r.reorder_point||0,lt:r.lead_time_days||14,price:r.unit_price||0,ucost:r.unit_cost||0,safety:r.safety_stock||0,demand:r.annual_demand||0,ordcost:r.ordering_cost||50,margin:r.unit_price?((r.unit_price-r.unit_cost)/r.unit_price*100):0,abc:'B',notes:r.notes||''}));},
+  async addSku(s){if(!sb||!currentUser){SKUS.push({...s,id:Date.now(),stock:0,days:0,status:'unknown',margin:s.price&&s.ucost?((s.price-s.ucost)/s.price*100):0,abc:'C'});return;}await sb.from('skus').insert({user_id:currentUser.id,sku_code:s.code,name:s.name,category:s.cat,current_stock:0,reorder_point:s.rop,lead_time_days:s.lt,unit_price:s.price,unit_cost:s.ucost,safety_stock:s.safety,annual_demand:s.demand,ordering_cost:s.ordcost,status:'unknown',days_of_stock:0,notes:s.notes});},
+  async bulkAddSkus(rows){if(!sb||!currentUser){SKUS.push(...rows.map(r=>({...r,id:Date.now()+Math.random(),stock:+r.current_stock||0,days:0,status:'unknown',margin:0,abc:'C',notes:''})));return rows.length;}const ins=rows.map(r=>({user_id:currentUser.id,sku_code:r.sku_code||r.code,name:r.name,category:r.category||r.cat,current_stock:+r.current_stock||0,reorder_point:+r.reorder_point||0,lead_time_days:+r.lead_time_days||14,unit_price:+r.unit_price||0,status:'unknown',days_of_stock:0}));const{error}=await sb.from('skus').insert(ins);if(error)throw error;return rows.length;},
+  async getLots(){if(!sb||!currentUser)return LOTS;const{data,error}=await sb.from('inventory_lots').select('*').eq('user_id',currentUser.id).order('received_date');if(error)return LOTS;return data.map(r=>({id:r.id,lot:r.lot_number,skuId:r.sku_id,skuName:r.sku_name||'Unknown',recv:r.received_date,expiry:r.expiry_date,qtyLeft:r.quantity_remaining||0,cost:r.unit_cost||0,age:Math.round((new Date()-new Date(r.received_date))/86400000),expDays:r.expiry_date?Math.round((new Date(r.expiry_date)-new Date())/86400000):null,notes:r.notes||''}));},
+  async addLot(l){if(!sb||!currentUser){LOTS.push({...l,id:Date.now()});return;}await sb.from('inventory_lots').insert({user_id:currentUser.id,sku_id:l.skuId,sku_name:l.skuName,lot_number:l.lot,received_date:l.recv,expiry_date:l.expiry||null,quantity_received:l.qty,quantity_remaining:l.qty,unit_cost:l.cost,notes:l.notes});},
+  async updateLotQty(id,qty){if(!sb||!currentUser){const l=LOTS.find(x=>x.id===id);if(l)l.qtyLeft=qty;return;}await sb.from('inventory_lots').update({quantity_remaining:qty}).eq('id',id);},
+  async getPOs(){if(!sb||!currentUser)return POS;const{data,error}=await sb.from('purchase_orders').select('*').eq('user_id',currentUser.id).order('created_at',{ascending:false});if(error)return POS;return data.map(r=>({id:r.id,num:String(r.id).substring(0,8).toUpperCase(),sku:r.sku_name,sup:r.supplier_name,qty:r.quantity||0,total:r.total_cost||0,status:r.status,eta:r.expected_date,notes:r.notes||''}));},
+  async addPO(p){if(!sb||!currentUser){POS.unshift({...p,id:Date.now()});return;}await sb.from('purchase_orders').insert({user_id:currentUser.id,sku_name:p.sku,supplier_name:p.sup,quantity:p.qty,unit_cost:p.ucost,total_cost:p.total,status:'DRAFT',expected_date:p.eta,notes:p.notes});},
+  async updatePOStatus(id,status){if(!sb||!currentUser){const p=POS.find(x=>x.id==id);if(p)p.status=status;return;}await sb.from('purchase_orders').update({status}).eq('id',id);},
+  async getSuppliers(){if(!sb||!currentUser)return SUPPLIERS;const{data,error}=await sb.from('suppliers').select('*').eq('user_id',currentUser.id);if(error)return SUPPLIERS;return data.map(r=>({id:r.id,name:r.name,email:r.email,lt:r.lead_time_days,ontime:r.on_time_rate,fill:r.fill_rate,risk:r.on_time_rate<70?'HIGH':r.on_time_rate<85?'MEDIUM':'LOW',terms:r.payment_terms||'Net 30',trend:'stable',notes:r.notes||''}));},
+  async addSupplier(s){if(!sb||!currentUser){SUPPLIERS.push({...s,id:Date.now()});return;}await sb.from('suppliers').insert({user_id:currentUser.id,name:s.name,email:s.email,lead_time_days:s.lt,on_time_rate:s.ontime,fill_rate:s.fill,payment_terms:s.terms,notes:s.notes});},
+  async getAlerts(){if(!sb||!currentUser)return ALERTS;const{data,error}=await sb.from('alerts').select('*').eq('user_id',currentUser.id).order('created_at',{ascending:false});if(error)return ALERTS;return data.map(r=>({id:r.id,title:r.title,desc:r.description,sev:r.severity,read:r.is_read,sku:r.sku_name,date:r.created_at?.split('T')[0]}));},
+  async markAlertRead(id){if(!sb||!currentUser){const a=ALERTS.find(x=>x.id===id);if(a)a.read=true;return;}await sb.from('alerts').update({is_read:true}).eq('id',id);},
+  async markAllAlertsRead(){if(!sb||!currentUser){ALERTS.forEach(a=>a.read=true);return;}await sb.from('alerts').update({is_read:true}).eq('user_id',currentUser.id);}
+};
+
+// ── NAVIGATION ────────────────────────────────────────────────────────
+const PAGE_TITLES={dashboard:'Demand Overview',skus:'SKU Catalog',abc:'ABC Classification',lots:'Costing & Aging',reorder:'Reorder Engine',pos:'Purchase Orders',finance:'Financial Model',suppliers:'Suppliers',alerts:'Alert Center',audit:'Audit Log',rules:'Alert Rules',import:'Import Data'};
+function goto(page){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('page-'+page)?.classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n=>{if(n.getAttribute('onclick')?.includes("'"+page+"'"))n.classList.add('active');});
+  document.getElementById('page-title').textContent=PAGE_TITLES[page]||page;
+  document.getElementById('user-menu').style.display='none';
+  if(page==='skus')renderSkus();
+  if(page==='abc')renderABC();
+  if(page==='lots')renderLots();
+  if(page==='reorder')renderReorder();
+  if(page==='pos')renderPOs();
+  if(page==='suppliers')renderSuppliers();
+  if(page==='alerts')renderAlerts();
+  if(page==='audit')renderAudit();
+  if(page==='rules')renderRules();
+  if(page==='finance')renderFinance();
+}
+
+// ── MODAL ─────────────────────────────────────────────────────────────
+let currentModal=null;
+function openModal(name){
+  document.getElementById('modal-overlay').style.display='flex';
+  document.querySelectorAll('.modal').forEach(m=>m.style.display='none');
+  document.getElementById('modal-'+name).style.display='block';
+  currentModal=name;
+  if(name==='add-lot'||name==='record-sale'){
+    DB.getSkus().then(skus=>{['lot-sku','sale-sku'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML='<option value="">Select SKU...</option>'+skus.map(s=>`<option value="${s.id}">${s.name}</option>`).join('');});});
+    if(name==='record-sale')document.getElementById('sale-method-info').innerHTML=`Method: <strong style="color:var(--accent)">${currentMethod}</strong> — ${currentMethod==='FIFO'?'oldest lots first':currentMethod==='LIFO'?'newest lots first':'weighted average cost'}`;
+  }
+  if(name==='create-po'){
+    Promise.all([DB.getSkus(),DB.getSuppliers()]).then(([skus,sups])=>{
+      document.getElementById('po-sku').innerHTML='<option value="">Select SKU...</option>'+skus.map(s=>`<option value="${s.id}">${s.name}</option>`).join('');
+      document.getElementById('po-sup').innerHTML='<option value="">Select Supplier...</option>'+sups.map(s=>`<option value="${s.id}">${s.name} (${s.lt}d lead)</option>`).join('');
+    });
+    ['po-qty','po-cost'].forEach(id=>{document.getElementById(id).oninput=()=>{const q=+document.getElementById('po-qty').value,c=+document.getElementById('po-cost').value;document.getElementById('po-total').textContent=q&&c?'Total: '+fmt(q*c):'';}});
+  }
+  if(name==='eoq-calc')calcEOQ();
+}
+function closeModal(){document.getElementById('modal-overlay').style.display='none';currentModal=null;}
+
+// ── EOQ CALCULATOR ────────────────────────────────────────────────────
+function calcEOQ(){
+  const D=+document.getElementById('eoq-d').value||0;
+  const S=+document.getElementById('eoq-s').value||0;
+  const H=+document.getElementById('eoq-h').value||0;
+  if(!D||!S||!H){document.getElementById('eoq-result').style.display='none';return;}
+  const eoq=Math.round(Math.sqrt((2*D*S)/H));
+  const freq=Math.round(D/eoq*10)/10;
+  const cost=Math.round(Math.sqrt(2*D*S*H));
+  document.getElementById('eoq-qty').textContent=eoq.toLocaleString();
+  document.getElementById('eoq-freq').textContent=freq+'×';
+  document.getElementById('eoq-cost').textContent=fmt(cost);
+  document.getElementById('eoq-formula').textContent=`EOQ = √(2 × ${D.toLocaleString()} × $${S} ÷ $${H}) = ${eoq} units per order`;
+  document.getElementById('eoq-result').style.display='block';
+}
+
+// ── RENDER: DASHBOARD ─────────────────────────────────────────────────
+function renderDashboard(){
+  document.getElementById('health-bars').innerHTML=[['Healthy',31,'var(--accent)'],['Low Stock',8,'var(--orange)'],['Critical',3,'var(--red)'],['Excess',5,'var(--gold)'],['Stockout',1,'var(--red)']].map(([l,v,c])=>`
+    <div style="margin-bottom:12px">
+      <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+        <span style="font-size:12px;font-weight:500">${l}</span>
+        <span style="font-family:'Courier New',monospace;font-size:12px;color:${c};font-weight:600">${v}</span>
+      </div>
+      <div class="bar-track"><div class="bar-fill" style="width:${Math.round(v/48*100)}%;background:${c}"></div></div>
+    </div>`).join('')+`<div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border2)"><div style="font-family:'Courier New',monospace;font-size:10px;color:var(--text3)">COSTING METHOD: <strong style="color:var(--accent)">FIFO</strong></div></div>`;
+  document.getElementById('dash-alerts').innerHTML=ALERTS.filter(a=>!a.read).slice(0,4).map((a,i)=>`
+    <div style="display:flex;align-items:flex-start;gap:12px;padding:13px 20px;${i<3?'border-bottom:1px solid var(--border2)':''}">
+      ${tag(a.sev,a.sev)}
+      <div style="flex:1"><div style="font-size:13px;font-weight:600;margin-bottom:3px">${a.title}</div><div style="font-size:12px;color:var(--text2)">${a.desc}</div></div>
+      <div style="font-family:'Courier New',monospace;font-size:10px;color:var(--text3);flex-shrink:0;white-space:nowrap">${a.date}</div>
+    </div>`).join('');
+}
+
+// ── RENDER: SKUS ──────────────────────────────────────────────────────
+async function renderSkus(){
+  const tb=document.getElementById('sku-tbody');
+  tb.innerHTML='<tr><td colspan="9" style="text-align:center;color:var(--text3);padding:24px">Loading...</td></tr>';
+  const skus=await DB.getSkus();
+  if(!skus.length){tb.innerHTML='<tr><td colspan="9" style="text-align:center;color:var(--text3);padding:24px">No SKUs yet — click "+ Add SKU" or import a CSV.</td></tr>';return;}
+  tb.innerHTML=skus.map(s=>`<tr>
+    <td style="font-family:'Courier New',monospace;font-size:11px;color:var(--text3)">${s.code||'—'}</td>
+    <td><div style="font-weight:600">${s.name}</div>${s.notes?`<div style="font-size:11px;color:var(--text3);margin-top:1px">${s.notes}</div>`:''}</td>
+    <td style="color:var(--text2)">${s.cat||'—'}</td>
+    <td><span class="abc-${(s.abc||'C').toLowerCase()}">Class ${s.abc||'C'}</span></td>
+    <td style="font-family:'Courier New',monospace;font-weight:600">${(s.stock||0).toLocaleString()}</td>
+    <td><span style="font-family:Georgia,serif;font-size:20px;color:${daysColor(s.days||0)}">${(s.days||0)>180?'180+':s.days||0}</span></td>
+    <td><span style="font-family:'Courier New',monospace;font-size:12px;font-weight:600;color:${(s.margin||0)>40?'var(--accent)':'var(--orange)'}">${(s.margin||0).toFixed(1)}%</span></td>
+    <td style="font-family:'Courier New',monospace">${s.rop||0}</td>
+    <td>${tag(s.status||'unknown',s.status||'unknown')}</td>
+  </tr>`).join('');
+}
+
+async function saveSku(){
+  const code=document.getElementById('sku-code').value.trim();
+  if(!code){showToast('SKU code is required','error');return;}
+  const price=+document.getElementById('sku-price').value||0,ucost=+document.getElementById('sku-ucost').value||0;
+  const btn=document.querySelector('#modal-add-sku .btn');btn.innerHTML='<span class="spinner"></span>Saving...';btn.disabled=true;
+  await DB.addSku({code,name:document.getElementById('sku-name').value,cat:document.getElementById('sku-cat').value,price,ucost,rop:+document.getElementById('sku-rop').value,lt:+document.getElementById('sku-lt').value,safety:+document.getElementById('sku-safety').value,demand:+document.getElementById('sku-demand').value,ordcost:+document.getElementById('sku-ordcost').value,notes:document.getElementById('sku-notes').value});
+  logAction('CREATE','SKU',code);
+  btn.textContent='Create SKU';btn.disabled=false;
+  closeModal();await renderSkus();showToast(`SKU ${code} created`);
+}
+
+// ── RENDER: ABC ANALYSIS ──────────────────────────────────────────────
+async function renderABC(){
+  const skus=await DB.getSkus();
+  const withRev=skus.map(s=>({...s,rev:s.stock*s.price||0})).sort((a,b)=>b.rev-a.rev);
+  const totalRev=withRev.reduce((a,s)=>a+s.rev,0)||1;
+  let cumPct=0;
+  const classified=withRev.map(s=>{
+    const pct=s.rev/totalRev*100;cumPct+=pct;
+    const cls=cumPct<=70?'A':cumPct<=90?'B':'C';
+    return {...s,pct,cumPct,cls};
+  });
+  // Chart
+  document.getElementById('abc-chart').innerHTML=classified.map(s=>`
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+      <div style="width:140px;font-size:12px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${s.name}</div>
+      <span class="abc-${s.cls.toLowerCase()}" style="flex-shrink:0">${s.cls}</span>
+      <div style="flex:1;height:16px;background:var(--bg2);border-radius:4px;overflow:hidden"><div style="height:100%;width:${s.pct.toFixed(1)}%;background:${s.cls==='A'?'#E65100':s.cls==='B'?'var(--blue)':'var(--text3)'};border-radius:4px;transition:width 0.4s"></div></div>
+      <div style="font-family:'Courier New',monospace;font-size:11px;color:var(--text3);width:50px;text-align:right">${s.pct.toFixed(1)}%</div>
+      <div style="font-family:'Courier New',monospace;font-size:11px;font-weight:600;width:70px;text-align:right">${fmt(s.rev)}</div>
+    </div>`).join('');
+  // Table
+  document.getElementById('abc-tbody').innerHTML=classified.map(s=>`<tr>
+    <td><div style="font-weight:600">${s.name}</div><div style="font-size:11px;color:var(--text3);font-family:'Courier New',monospace">${s.code}</div></td>
+    <td><span class="abc-${s.cls.toLowerCase()}">Class ${s.cls}</span></td>
+    <td style="font-family:'Courier New',monospace;font-weight:600">${fmt(s.rev)}</td>
+    <td><div style="display:flex;align-items:center;gap:6px"><div style="height:4px;width:${Math.round(s.cumPct)}px;max-width:100px;background:${s.cls==='A'?'#E65100':s.cls==='B'?'var(--blue)':'var(--text3)'};border-radius:2px"></div><span style="font-family:'Courier New',monospace;font-size:11px">${s.cumPct.toFixed(1)}%</span></div></td>
+    <td><span style="font-family:'Courier New',monospace;font-weight:600;color:${s.margin>40?'var(--accent)':'var(--orange)'}">${s.margin.toFixed(1)}%</span></td>
+    <td style="font-size:12px;color:var(--text2)">${s.cls==='A'?'Tight reorder controls. Never let this stock out.':s.cls==='B'?'Moderate review cadence. Monitor seasonality.':'Consider discontinuing if margin &lt; 30%.'}</td>
+  </tr>`).join('');
+}
+
+// ── RENDER: REORDER ENGINE ────────────────────────────────────────────
+async function renderReorder(){
+  const skus=await DB.getSkus();
+  const rows=skus.map(s=>{
+    const eoq=s.demand&&s.ordcost?(Math.round(Math.sqrt(2*s.demand*s.ordcost/(s.ucost*0.25)))||0):0;
+    const reorderDays=s.lt+(s.safety?Math.round(s.safety/Math.max(s.demand/365,1)):0);
+    const urgency=s.days<s.lt?'IMMEDIATE':s.days<s.lt+7?'THIS WEEK':'PLANNED';
+    const suggestedQty=Math.max(eoq,s.rop||0);
+    return {...s,eoq,reorderDays,urgency,suggestedQty,estCost:suggestedQty*(s.ucost||0)};
+  }).filter(s=>s.urgency!=='PLANNED'||s.days<60).sort((a,b)=>a.days-b.days);
+  document.getElementById('reorder-tbody').innerHTML=rows.length?rows.map(r=>`<tr>
+    <td><div style="font-weight:600">${r.name}</div><div style="font-size:11px;color:var(--text3);font-family:'Courier New',monospace">${r.code}</div></td>
+    <td style="font-family:'Courier New',monospace;font-weight:600">${(r.stock||0).toLocaleString()}</td>
+    <td><span style="font-family:Georgia,serif;font-size:18px;color:${daysColor(r.days||0)}">${r.days||0}d</span></td>
+    <td style="font-family:'Courier New',monospace">${r.lt}d</td>
+    <td style="font-family:'Courier New',monospace">${r.safety||0}</td>
+    <td style="font-family:'Courier New',monospace;color:var(--blue);font-weight:600">${r.eoq||'—'}</td>
+    <td style="font-family:'Courier New',monospace;font-weight:700;font-size:15px">${r.suggestedQty.toLocaleString()}</td>
+    <td style="font-family:'Courier New',monospace">${r.estCost>0?fmt(r.estCost):'—'}</td>
+    <td>${tag(r.urgency==='IMMEDIATE'?'CRITICAL':r.urgency==='THIS WEEK'?'HIGH':'MEDIUM',r.urgency)}</td>
+    <td><button class="btn btn-sm" onclick="quickCreatePO(${r.id})">Create PO &rarr;</button></td>
+  </tr>`).join(''):'<tr><td colspan="10" style="text-align:center;color:var(--text3);padding:24px">No urgent reorders needed right now.</td></tr>';
+}
+
+async function quickCreatePO(skuId){
+  const skus=await DB.getSkus();const s=skus.find(x=>x.id==skuId);if(!s)return;
+  openModal('create-po');
+  setTimeout(()=>{document.getElementById('po-sku').value=skuId;document.getElementById('po-qty').value=s.suggestedQty||Math.max(s.eoq||0,s.rop||0);document.getElementById('po-cost').value=s.ucost||0;const q=+document.getElementById('po-qty').value,c=+document.getElementById('po-cost').value;document.getElementById('po-total').textContent=q&&c?'Total: '+fmt(q*c):'';document.getElementById('po-notes').value=`EOQ-recommended order for ${s.name}`;},300);
+}
+
+// ── RENDER: LOTS ──────────────────────────────────────────────────────
+let currentMethod='FIFO';
+const cogsInfo={FIFO:{cogs:348200,margin:38.4,desc:"Oldest lots deducted first — lower COGS, higher reported profit"},LIFO:{cogs:366600,margin:35.2,desc:"Newest lots deducted first — higher COGS, lower taxable income"},WEIGHTED_AVG:{cogs:357400,margin:36.8,desc:"Blended average cost per unit — smooths price fluctuations"}};
+
+function setMethod(m){
+  currentMethod=m;
+  document.querySelectorAll('.method-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('btn-'+m).classList.add('active');
+  renderLots();
+}
+
+async function renderLots(){
+  const lots=await DB.getLots();LOTS=lots;
+  const info=cogsInfo[currentMethod];
+  const expiring=lots.filter(l=>l.expDays!==null&&l.expDays<=RULES.expiry);
+  const sorted=currentMethod==='LIFO'?[...lots].sort((a,b)=>b.recv.localeCompare(a.recv)):[...lots].sort((a,b)=>a.recv.localeCompare(b.recv));
+  document.getElementById('method-desc').innerHTML=`<strong style="color:var(--accent)">${currentMethod}</strong> — ${info.desc}`;
+  document.getElementById('lots-sort-label').textContent=currentMethod+' priority order';
+  const eb=document.getElementById('expiring-badge');eb.textContent=expiring.length+' Expiring';eb.style.display=expiring.length?'inline':'none';
+  document.getElementById('lots-kpis').innerHTML=`
+    <div class="kpi" style="border-top:3px solid var(--accent)"><span class="kpi-label">COGS (${currentMethod})</span><div class="kpi-val" style="font-size:26px">${fmt(info.cogs)}</div><div class="kpi-sub" style="color:var(--accent)">Gross margin: ${info.margin}%</div></div>
+    <div class="kpi" style="border-top:3px solid var(--red)"><span class="kpi-label">Expiry Risk</span><div class="kpi-val" style="font-size:26px;color:var(--orange)">${fmt(expiring.reduce((a,l)=>a+l.qtyLeft*l.cost,0).toFixed(0))}</div><div class="kpi-sub" style="color:var(--text3)">${expiring.length} lots expiring ≤${RULES.expiry} days</div></div>
+    <div class="kpi" style="border-top:3px solid var(--blue)"><span class="kpi-label">FIFO vs LIFO Delta</span><div class="kpi-val" style="font-size:26px;color:var(--blue)">$18,400</div><div class="kpi-sub" style="color:var(--text3)">LIFO lowers tax in rising-cost env.</div></div>`;
+  document.getElementById('lots-tbody').innerHTML=sorted.map((lot,i)=>{
+    const isExp=lot.expDays!==null&&lot.expDays<=RULES.expiry;
+    const ac=isExp?'var(--red)':lot.age>100?'var(--orange)':'var(--accent)';
+    const pri=isExp?`<span class="tag tag-red">[!] EXPIRING</span>`:i===0?`<span class="tag tag-green">↑ ${currentMethod} #1</span>`:`<span class="tag tag-gray">#${i+1}</span>`;
+    return `<tr>
+      <td><div style="font-size:12px;font-weight:600">${lot.skuName}</div><div style="font-family:'Courier New',monospace;font-size:10px;color:var(--text3)">${lot.lot}${lot.expiry?' · Exp '+lot.expiry:''}</div>${lot.notes?`<div style="font-size:10px;color:var(--text3);font-style:italic">${lot.notes}</div>`:''}</td>
+      <td style="font-family:'Courier New',monospace;font-size:11px;color:var(--text3)">${lot.recv}</td>
+      <td style="font-family:'Courier New',monospace;font-weight:600">${lot.qtyLeft}</td>
+      <td style="font-family:'Courier New',monospace">${fmtFull(lot.cost)}</td>
+      <td><div style="font-family:'Courier New',monospace;font-size:13px;font-weight:700;color:${ac}">${lot.age}d</div><div class="bar-track" style="width:55px;margin-top:3px"><div class="bar-fill" style="width:${Math.min(100,(lot.age/150)*100)}%;background:${ac}"></div></div></td>
+      <td>${pri}</td>
+    </tr>`;
+  }).join('');
+  document.getElementById('cogs-compare').innerHTML=`
+    <div class="card-head"><div><h3>FIFO vs LIFO Impact</h3><div class="sub" style="margin-top:1px">Q1 2026 · Rising cost environment</div></div></div>
+    <div style="padding:14px;display:flex;flex-direction:column;gap:10px">
+    ${[['FIFO','var(--accent)',cogsInfo.FIFO,'↑ Higher Margin'],['LIFO','var(--blue)',cogsInfo.LIFO,'↓ Lower Tax']].map(([nm,clr,data,tag_])=>`
+      <div style="background:var(--surface2);border-radius:8px;padding:13px;border:2px solid ${currentMethod===nm?clr.replace('var(','').replace(')',''):' transparent'};position:relative">
+        <div style="position:absolute;top:10px;right:10px;font-family:'Courier New',monospace;font-size:9px;font-weight:700;padding:2px 7px;border-radius:4px;background:var(--bg2);color:${clr}">${tag_}</div>
+        <div style="font-family:'Courier New',monospace;font-size:11px;font-weight:800;letter-spacing:2px;color:${clr};margin-bottom:7px">${nm}</div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="font-size:11px;color:var(--text3)">COGS</span><span style="font-family:Georgia,serif;font-size:17px;color:${clr}">${fmt(data.cogs)}</span></div>
+        <div style="display:flex;justify-content:space-between"><span style="font-size:11px;color:var(--text3)">Gross Margin</span><span style="font-family:'Courier New',monospace;font-size:12px;font-weight:600;color:${clr}">${data.margin}%</span></div>
+      </div>`).join('')}
+    </div>`;
+  const ep=document.getElementById('expiry-alerts-panel');
+  ep.innerHTML=expiring.length?`<div class="card"><div class="card-head"><h3>Expiry Risk Alerts</h3></div><div style="padding:12px;display:flex;flex-direction:column;gap:8px">${expiring.map(l=>`<div style="display:flex;align-items:center;gap:10px;background:var(--red-light);border:1px solid #EBB7B2;border-radius:8px;padding:10px 12px"><div style="flex:1"><div style="font-size:12px;font-weight:600;color:var(--red)">${l.lot}</div><div style="font-family:'Courier New',monospace;font-size:10px;color:var(--text3);margin-top:1px">${l.qtyLeft} units · ${fmt((l.qtyLeft*l.cost).toFixed(0))} at risk</div></div><div style="font-family:Georgia,serif;font-size:22px;color:var(--red)">${l.expDays}d</div></div>`).join('')}</div></div>`:'';
+}
+
+async function saveLot(){
+  const skuId=document.getElementById('lot-sku').value;if(!skuId){showToast('Select a SKU','error');return;}
+  const skus=await DB.getSkus();const sku=skus.find(s=>s.id==skuId)||SKUS.find(s=>s.id==+skuId);
+  const expiry=document.getElementById('lot-expiry').value||null;
+  const btn=document.querySelector('#modal-add-lot .btn');btn.innerHTML='<span class="spinner"></span>Saving...';btn.disabled=true;
+  const notes=document.getElementById('lot-notes').value;
+  await DB.addLot({skuId,skuName:sku?.name||'Unknown',lot:document.getElementById('lot-num').value,recv:document.getElementById('lot-recv').value,expiry,qty:+document.getElementById('lot-qty').value,cost:+document.getElementById('lot-cost').value,expDays:expiry?Math.round((new Date(expiry)-new Date())/86400000):null,notes});
+  logAction('CREATE','Lot',document.getElementById('lot-num').value+' for '+sku?.name);
+  btn.textContent='Add Lot';btn.disabled=false;closeModal();await renderLots();showToast('Lot added');
+}
+
+async function doSale(){
+  const skuId=+document.getElementById('sale-sku').value,qty=+document.getElementById('sale-qty').value;
+  if(!skuId||!qty){showToast('Select SKU and quantity','error');return;}
+  const lots=await DB.getLots(),skuLots=lots.filter(l=>l.skuId==skuId&&l.qtyLeft>0);
+  const ordered=currentMethod==='LIFO'?[...skuLots].sort((a,b)=>b.recv.localeCompare(a.recv)):[...skuLots].sort((a,b)=>a.recv.localeCompare(b.recv));
+  const avgC=skuLots.length?skuLots.reduce((a,l)=>a+l.qtyLeft*l.cost,0)/skuLots.reduce((a,l)=>a+l.qtyLeft,0):0;
+  let rem=qty,cogs=0,layers=[];
+  for(const lot of ordered){if(rem<=0)break;const take=Math.min(lot.qtyLeft,rem);const uc=currentMethod==='WEIGHTED_AVG'?avgC:lot.cost;cogs+=take*uc;layers.push({lot:lot.lot,units:take,uc:uc.toFixed(2),cogs:(take*uc).toFixed(2)});rem-=take;await DB.updateLotQty(lot.id,lot.qtyLeft-take);}
+  const notes=document.getElementById('sale-notes').value;
+  logAction('SALE',`${qty} units`,'COGS: '+fmtFull(cogs)+' via '+currentMethod+(notes?' | '+notes:''));
+  closeModal();
+  document.getElementById('sale-result-panel').innerHTML=`<div class="card"><div style="padding:14px 16px"><div style="font-family:'Courier New',monospace;font-size:9px;color:var(--accent);font-weight:700;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:8px">Last Sale · ${currentMethod}</div><div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="font-size:12px;color:var(--text2)">Units Sold</span><span style="font-family:'Courier New',monospace;font-size:13px;font-weight:600">${qty}</span></div><div style="display:flex;justify-content:space-between;margin-bottom:10px"><span style="font-size:12px;color:var(--text2)">Total COGS</span><span style="font-family:Georgia,serif;font-size:20px;color:var(--accent)">${fmtFull(cogs)}</span></div><div style="border-top:1px solid var(--border2);padding-top:8px">${layers.map(l=>`<div style="font-family:'Courier New',monospace;font-size:10px;color:var(--text3);display:flex;justify-content:space-between;margin-bottom:2px"><span>${l.lot}</span><span>${l.units}×${fmtFull(l.uc)}=${fmtFull(l.cogs)}</span></div>`).join('')}</div></div></div>`;
+  await renderLots();showToast(`COGS: ${fmtFull(cogs)} under ${currentMethod}`);
+}
+
+// ── RENDER: POs ───────────────────────────────────────────────────────
+async function renderPOs(){
+  const tb=document.getElementById('po-tbody');tb.innerHTML='<tr><td colspan="9" style="text-align:center;color:var(--text3);padding:24px">Loading...</td></tr>';
+  const pos=await DB.getPOs();
+  if(!pos.length){tb.innerHTML='<tr><td colspan="9" style="text-align:center;color:var(--text3);padding:24px">No purchase orders yet.</td></tr>';return;}
+  tb.innerHTML=pos.map(p=>`<tr>
+    <td style="font-family:'Courier New',monospace;font-size:11px;color:var(--accent);font-weight:600">${p.num}</td>
+    <td style="font-weight:600">${p.sku}</td>
+    <td style="color:var(--text2)">${p.sup}</td>
+    <td style="font-family:'Courier New',monospace">${(p.qty||0).toLocaleString()}</td>
+    <td style="font-family:Georgia,serif;font-size:16px">${fmt(p.total)}</td>
+    <td style="font-family:'Courier New',monospace;font-size:11px;color:var(--text3)">${p.eta||'—'}</td>
+    <td>${tag(p.status,p.status)}</td>
+    <td style="font-size:11px;color:var(--text3);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.notes||'—'}</td>
+    <td>${!['RECEIVED','CANCELLED'].includes(p.status)?`<button class="btn-advance" onclick="advancePO('${p.id}')">&rarr; Advance</button>`:''}</td>
+  </tr>`).join('');
+}
+
+async function advancePO(id){
+  const flow={DRAFT:'SENT',SENT:'CONFIRMED',CONFIRMED:'RECEIVED'};
+  const pos=await DB.getPOs();const po=pos.find(p=>p.id==id);
+  if(po&&flow[po.status]){await DB.updatePOStatus(id,flow[po.status]);logAction('UPDATE','PO '+po.num,po.status+' &rarr; '+flow[po.status]);await renderPOs();showToast('PO &rarr; '+flow[po.status]);}
+}
+
+async function savePO(){
+  const skuId=document.getElementById('po-sku').value,supId=document.getElementById('po-sup').value;
+  if(!skuId||!supId){showToast('Select SKU and Supplier','error');return;}
+  const[skus,sups]=await Promise.all([DB.getSkus(),DB.getSuppliers()]);
+  const sku=skus.find(s=>s.id==skuId)||SKUS.find(s=>s.id==+skuId),sup=sups.find(s=>s.id==supId)||SUPPLIERS.find(s=>s.id==+supId);
+  const qty=+document.getElementById('po-qty').value,cost=+document.getElementById('po-cost').value;
+  const notes=document.getElementById('po-notes').value;
+  const btn=document.querySelector('#modal-create-po .btn');btn.innerHTML='<span class="spinner"></span>Creating...';btn.disabled=true;
+  await DB.addPO({sku:sku?.name||'—',sup:sup?.name||'—',qty,ucost:cost,total:qty*cost,eta:document.getElementById('po-eta').value,notes});
+  logAction('CREATE','PO',`${qty}× ${sku?.name} from ${sup?.name} | ${fmt(qty*cost)}`);
+  btn.textContent='Create PO';btn.disabled=false;closeModal();await renderPOs();showToast('Purchase order created');
+}
+
+// ── RENDER: FINANCE ───────────────────────────────────────────────────
+function renderFinance(){
+  const skuMargins=[{name:'Yoga Mat Premium',rev:12920,cogs:6290,margin:51.3},{name:'Running Shoes M/10',rev:37380,cogs:18480,margin:50.6},{name:'Vitamin C 1000mg',rev:4480,cogs:2176,margin:51.4},{name:'Protein Powder 2lb',rev:7056,cogs:3646,margin:48.3},{name:'Wireless Earbuds Pro',rev:19072,cogs:11392,margin:40.3},{name:'Winter Jacket XL',rev:15240,cogs:9144,margin:40.0}];
+  document.getElementById('margin-by-sku').innerHTML=skuMargins.sort((a,b)=>b.margin-a.margin).map(s=>`
+    <div><div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="font-size:12px;font-weight:500">${s.name}</span><span style="font-family:'Courier New',monospace;font-size:12px;color:${s.margin>45?'var(--accent)':'var(--orange)'};font-weight:600">${s.margin}%</span></div>
+    <div class="bar-track"><div class="bar-fill" style="width:${s.margin}%;background:${s.margin>45?'var(--accent)':'var(--orange)'}"></div></div>
+    <div style="display:flex;justify-content:space-between;margin-top:2px"><span style="font-family:'Courier New',monospace;font-size:10px;color:var(--text3)">Rev: ${fmt(s.rev)}</span><span style="font-family:'Courier New',monospace;font-size:10px;color:var(--text3)">COGS: ${fmt(s.cogs)}</span></div>
+    </div>`).join('');
+}
+
+// ── RENDER: SUPPLIERS ─────────────────────────────────────────────────
+async function renderSuppliers(){
+  const grid=document.getElementById('sup-grid');grid.innerHTML='<div style="color:var(--text3);padding:24px">Loading...</div>';
+  const sups=await DB.getSuppliers();
+  if(!sups.length){grid.innerHTML='<div style="color:var(--text3);padding:24px">No suppliers — click "+ Add Supplier".</div>';return;}
+  const trendIcon={improving:'↗ Improving',declining:'↘ Declining',stable:'&rarr; Stable'};
+  const trendColor={improving:'var(--accent)',declining:'var(--red)',stable:'var(--text3)'};
+  grid.innerHTML=sups.map(s=>`
+    <div class="card" style="border-left:3px solid ${riskColor(s.risk)}">
+      <div style="padding:18px">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px">
+          <div><div style="font-size:14px;font-weight:700">${s.name}</div><div style="font-family:'Courier New',monospace;font-size:10px;color:var(--text3);margin-top:2px">${s.email||'—'} · ${s.terms||'Net 30'}</div></div>
+          ${tag(s.risk+' RISK',s.risk+' RISK')}
+        </div>
+        ${[['On-Time Rate',s.ontime,'%',s.ontime>=85?'var(--accent)':s.ontime>=70?'var(--orange)':'var(--red)'],['Fill Rate',s.fill,'%',s.fill>=90?'var(--accent)':'var(--orange)'],['Lead Time',s.lt,' days','var(--text)']].map(([l,v,u,c])=>`
+          <div style="margin-bottom:10px">
+            <div style="display:flex;justify-content:space-between;margin-bottom:3px"><span style="font-size:11px;color:var(--text2)">${l}</span><span style="font-family:'Courier New',monospace;font-size:12px;font-weight:600;color:${c}">${v}${u}</span></div>
+            ${u==='%'?`<div class="bar-track"><div class="bar-fill" style="width:${v}%;background:${c}"></div></div>`:''}</div>`).join('')}
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;padding-top:10px;border-top:1px solid var(--border2)">
+          <span style="font-size:11px;font-weight:600;color:${trendColor[s.trend||'stable']}">${trendIcon[s.trend||'stable']}</span>
+          ${s.notes?`<span style="font-size:11px;color:var(--text3);font-style:italic">${s.notes}</span>`:''}
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+async function saveSupplier(){
+  const name=document.getElementById('sup-name').value.trim();if(!name){showToast('Company name required','error');return;}
+  const ontime=+document.getElementById('sup-ontime').value,fill=+document.getElementById('sup-fill').value;
+  const btn=document.querySelector('#modal-add-supplier .btn');btn.innerHTML='<span class="spinner"></span>Saving...';btn.disabled=true;
+  await DB.addSupplier({name,email:document.getElementById('sup-email').value,lt:+document.getElementById('sup-lt').value,ontime,fill,risk:ontime<70?'HIGH':ontime<85?'MEDIUM':'LOW',terms:document.getElementById('sup-terms').value,trend:'stable',notes:document.getElementById('sup-notes').value});
+  logAction('CREATE','Supplier',name);
+  btn.textContent='Add Supplier';btn.disabled=false;closeModal();await renderSuppliers();showToast('Supplier added');
+}
+
+// ── RENDER: ALERTS ────────────────────────────────────────────────────
+async function renderAlerts(){
+  const alerts=await DB.getAlerts();
+  const unread=alerts.filter(a=>!a.read).length;
+  const badge=document.getElementById('alert-badge');badge.textContent=unread;badge.style.display=unread?'inline':'none';
+  const sc=s=>s==='CRITICAL'||s==='HIGH'?'var(--red-light)':s==='MEDIUM'?'var(--orange-light)':'var(--gold-light)';
+  const bc=s=>s==='CRITICAL'||s==='HIGH'?'#EBB7B2':s==='MEDIUM'?'#EDCBA8':'#DDD0A0';
+  const lc=s=>s==='CRITICAL'||s==='HIGH'?'var(--red)':s==='MEDIUM'?'var(--orange)':'var(--gold)';
+  document.getElementById('alerts-list').innerHTML=alerts.length?alerts.map(a=>`
+    <div style="background:${a.read?'var(--surface)':sc(a.sev)};border:1px solid ${a.read?'var(--border)':bc(a.sev)};border-radius:10px;padding:18px;border-left:3px solid ${a.read?'var(--border)':lc(a.sev)};opacity:${a.read?0.6:1};transition:all 0.2s">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start">
+        <div style="flex:1">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">${tag(a.sev,a.sev)}${a.sku?`<span style="font-family:'Courier New',monospace;font-size:10px;color:var(--text3)">${a.sku}</span>`:''}<span style="font-family:'Courier New',monospace;font-size:10px;color:var(--text3);margin-left:auto">${a.date||''}</span></div>
+          <div style="font-size:13px;font-weight:600;margin-bottom:4px">${a.title}</div>
+          <div style="font-size:12px;color:var(--text2);line-height:1.6">${a.desc}</div>
+        </div>
+        ${!a.read?`<button class="btn btn-outline btn-sm" style="margin-left:14px;flex-shrink:0" onclick="markRead('${a.id}')">Mark Read</button>`:''}
+      </div>
+    </div>`).join(''):'<div style="color:var(--text3);text-align:center;padding:32px">No alerts — all clear &#10003;</div>';
+}
+
+async function markRead(id){await DB.markAlertRead(id);await renderAlerts();}
+async function markAllRead(){await DB.markAllAlertsRead();await renderAlerts();showToast('All alerts marked as read');}
+
+// ── RENDER: AUDIT LOG ─────────────────────────────────────────────────
+function renderAudit(){
+  document.getElementById('audit-count').textContent=AUDIT_LOG.length+' entries';
+  if(!AUDIT_LOG.length){document.getElementById('audit-tbody').innerHTML='<tr><td colspan="5" style="text-align:center;color:var(--text3);padding:24px">No activity logged yet. Actions you take will appear here.</td></tr>';return;}
+  document.getElementById('audit-tbody').innerHTML=AUDIT_LOG.map(e=>`<tr>
+    <td style="font-family:'Courier New',monospace;font-size:11px;color:var(--text3);white-space:nowrap">${new Date(e.ts).toLocaleString()}</td>
+    <td style="font-size:12px;font-weight:500">${e.user}</td>
+    <td>${tag(e.action==='CREATE'?'healthy':e.action==='SALE'?'SENT':e.action==='UPDATE'?'CONFIRMED':'DRAFT',e.action)}</td>
+    <td style="font-size:12px;font-weight:600">${e.entity}</td>
+    <td style="font-size:12px;color:var(--text2)">${e.details}</td>
+  </tr>`).join('');
+}
+
+function downloadAuditLog(){
+  if(!AUDIT_LOG.length){showToast('No audit entries to export','warn');return;}
+  const csv='Timestamp,User,Action,Entity,Details\n'+AUDIT_LOG.map(e=>`"${e.ts}","${e.user}","${e.action}","${e.entity}","${e.details}"`).join('\n');
+  const a=document.createElement('a');a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);a.download='substox-audit-log.csv';a.click();
+  showToast('Audit log exported');
+}
+
+// ── RENDER: ALERT RULES ───────────────────────────────────────────────
+function renderRules(){
+  document.getElementById('rule-stockout').value=RULES.stockout;
+  document.getElementById('rule-lowstock').value=RULES.lowstock;
+  document.getElementById('rule-excess').value=RULES.excess;
+  document.getElementById('rule-supplier').value=RULES.supplier;
+  document.getElementById('rule-expiry').value=RULES.expiry;
+  document.getElementById('rule-fifo').value=RULES.fifo?'yes':'no';
+  document.getElementById('rules-display').innerHTML=[
+    `<span class="tag tag-red">Stockout &lt; ${RULES.stockout}d</span>`,
+    `<span class="tag tag-orange">Low Stock &lt; ${RULES.lowstock}d</span>`,
+    `<span class="tag tag-gold">Excess &gt; ${RULES.excess}d</span>`,
+    `<span class="tag tag-red">Supplier OT &lt; ${RULES.supplier}%</span>`,
+    `<span class="tag tag-orange">Expiry ≤ ${RULES.expiry}d</span>`,
+    `<span class="tag ${RULES.fifo?'tag-blue':'tag-gray'}">FIFO Violations ${RULES.fifo?'On':'Off'}</span>`,
+  ].join('');
+}
+
+function saveRules(){
+  RULES={stockout:+document.getElementById('rule-stockout').value,lowstock:+document.getElementById('rule-lowstock').value,excess:+document.getElementById('rule-excess').value,supplier:+document.getElementById('rule-supplier').value,expiry:+document.getElementById('rule-expiry').value,fifo:document.getElementById('rule-fifo').value==='yes'};
+  logAction('UPDATE','Alert Rules','Thresholds updated');
+  renderRules();showToast('Alert rules saved');
+}
+
+// ── CSV IMPORT ────────────────────────────────────────────────────────
+function handleCSV(file){
+  if(!file)return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    const lines=e.target.result.trim().split('\n');
+    const headers=lines[0].split(',').map(h=>h.trim().toLowerCase().replace(/"/g,''));
+    csvRows=lines.slice(1).filter(l=>l.trim()).map(line=>{const vals=line.split(',').map(v=>v.trim().replace(/"/g,''));const row={};headers.forEach((h,i)=>row[h]=vals[i]||'');return row;}).filter(r=>r.name||r.sku_code);
+    if(!csvRows.length){showToast('No valid rows found','error');return;}
+    document.getElementById('csv-status').textContent=`&#10003; ${csvRows.length} rows found in "${file.name}"`;
+    const cols=['sku_code','name','category','current_stock','reorder_point','lead_time_days','unit_price'];
+    document.getElementById('csv-table-wrap').innerHTML=`<table style="font-size:12px"><thead><tr>${cols.map(c=>`<th>${c}</th>`).join('')}</tr></thead><tbody>${csvRows.slice(0,5).map(r=>`<tr>${cols.map(c=>`<td>${r[c]||'—'}</td>`).join('')}</tr>`).join('')}${csvRows.length>5?`<tr><td colspan="${cols.length}" style="text-align:center;color:var(--text3);padding:8px">…and ${csvRows.length-5} more rows</td></tr>`:''}</tbody></table>`;
+    document.getElementById('csv-preview').style.display='block';
+  };
+  reader.readAsText(file);
+}
+
+async function importCSV(){
+  if(!csvRows.length)return;
+  const btn=document.getElementById('csv-import-btn');btn.innerHTML='<span class="spinner spinner-dark"></span>Importing...';btn.disabled=true;
+  try{
+    const count=await DB.bulkAddSkus(csvRows);
+    importHistory.unshift({date:new Date().toLocaleDateString(),file:document.getElementById('csv-file').files[0]?.name,rows:count});
+    document.getElementById('import-history').innerHTML=importHistory.map(h=>`<div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border2);font-size:13px"><span>${h.file}</span><span style="font-family:'Courier New',monospace;font-size:11px;color:var(--text3)">${h.rows} rows · ${h.date}</span><span class="tag tag-green">&#10003; Imported</span></div>`).join('');
+    logAction('IMPORT','CSV',csvRows.length+' SKUs from '+document.getElementById('csv-file').files[0]?.name);
+    showToast(`${count} SKUs imported`);
+    csvRows=[];document.getElementById('csv-preview').style.display='none';document.getElementById('csv-file').value='';
+  }catch(err){showToast('Import failed: '+err.message,'error');}
+  btn.textContent='Import All Rows';btn.disabled=false;
+}
+
+function cancelCSV(){csvRows=[];document.getElementById('csv-preview').style.display='none';document.getElementById('csv-file').value='';}
+function downloadTemplate(){
+  const csv='sku_code,name,category,current_stock,reorder_point,lead_time_days,unit_price\nSKU-0001,Example Product,Electronics,100,20,14,29.99\nSKU-0002,Another Product,Apparel,50,10,21,49.99\n';
+  const a=document.createElement('a');a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);a.download='substox-template.csv';a.click();showToast('Template downloaded');
+}
+const dz=document.getElementById('drop-zone');
+if(dz){dz.addEventListener('dragover',e=>{e.preventDefault();dz.classList.add('drag')});dz.addEventListener('dragleave',()=>dz.classList.remove('drag'));dz.addEventListener('drop',e=>{e.preventDefault();dz.classList.remove('drag');if(e.dataTransfer.files[0])handleCSV(e.dataTransfer.files[0]);});}
+
+// ── AUTH ──────────────────────────────────────────────────────────────
+let authTab='login';
+function showLanding(){document.getElementById('landing').style.display='block';document.getElementById('auth-screen').style.display='none';}
+function showAuth(tab){document.getElementById('landing').style.display='none';document.getElementById('auth-screen').style.display='flex';if(tab)switchTab(tab);}
+function switchTab(tab){authTab=tab;document.querySelectorAll('.auth-tab').forEach((t,i)=>t.classList.toggle('active',(i===0&&tab==='login')||(i===1&&tab==='signup')));document.getElementById('auth-btn').textContent=tab==='login'?'Sign In':'Create Account';document.getElementById('auth-error').style.display='none';document.getElementById('auth-ok').style.display='none';}
+async function doAuth(){
+  const email=document.getElementById('auth-email').value.trim(),password=document.getElementById('auth-password').value;
+  if(!email||!password){document.getElementById('auth-error').textContent='Please enter email and password.';document.getElementById('auth-error').style.display='block';return;}
+  const btn=document.getElementById('auth-btn');btn.innerHTML=`<span class="spinner"></span>${authTab==='login'?'Signing in...':'Creating account...'}`;btn.disabled=true;
+  document.getElementById('auth-error').style.display='none';document.getElementById('auth-ok').style.display='none';
+  const result=authTab==='login'?await sb.auth.signInWithPassword({email,password}):await sb.auth.signUp({email,password});
+  btn.disabled=false;btn.textContent=authTab==='login'?'Sign In':'Create Account';
+  if(result.error){document.getElementById('auth-error').textContent=result.error.message;document.getElementById('auth-error').style.display='block';return;}
+  if(authTab==='signup'){document.getElementById('auth-ok').textContent='&#10003; Check your email to confirm your account, then sign in.';document.getElementById('auth-ok').style.display='block';return;}
+  currentUser=result.data.user;document.getElementById('auth-screen').style.display='none';initApp(currentUser);
+}
+function demoLogin(){document.getElementById('auth-screen').style.display='none';document.getElementById('landing').style.display='none';initApp(null);}
+async function signOut(){if(sb)await sb.auth.signOut();location.reload();}
+function toggleUserMenu(){const m=document.getElementById('user-menu');m.style.display=m.style.display==='block'?'none':'block';}
+document.addEventListener('click',e=>{if(!e.target.closest('.user-area')&&!e.target.closest('#user-menu'))document.getElementById('user-menu').style.display='none';});
+
+// ── INIT ──────────────────────────────────────────────────────────────
+function initApp(user){
+  currentUser=user;
+  document.getElementById('app').style.display='flex';
+  document.getElementById('topbar-date').textContent=new Date().toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',year:'numeric'});
+  if(user){
+    const lbl=user.email.split('@')[0].substring(0,2).toUpperCase();
+    document.getElementById('user-avatar').textContent=lbl;
+    document.getElementById('user-name').textContent=user.email.split('@')[0];
+    document.getElementById('user-email').textContent=user.email;
+    document.getElementById('menu-email').textContent=user.email;
+    document.getElementById('sync-indicator').className='tag tag-green';
+    document.getElementById('sync-indicator').textContent='● Live';
+  }
+  logAction('LOGIN','Session',user?user.email:'Demo Mode');
+  renderDashboard();
+  renderLots();
+  renderAlerts().then(()=>{});
+}
+
+// ── BOOT ──────────────────────────────────────────────────────────────
+if(SUPABASE_READY){
+  const s=document.createElement('script');
+  s.src='https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
+  s.onload=async()=>{
+    sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+    const{data:{session}}=await sb.auth.getSession();
+    if(session){currentUser=session.user;initApp(currentUser);}
+    else{document.getElementById('landing').style.display='block';}
+  };
+  document.head.appendChild(s);
+}else{
+  document.getElementById('landing').style.display='block';
+}
+
+function clearAuditLog(){if(confirm("Clear audit log? This cannot be undone.")){AUDIT_LOG=[];renderAudit();showToast("Audit log cleared");}}
+</script>
+</body>
+</html>
